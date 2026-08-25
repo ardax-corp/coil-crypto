@@ -38,7 +38,6 @@ pub enum CryptoErrorTag {
 const MAX_RANDOM_BYTES: u64 = 1 << 20;
 const AEAD_KEY_LEN: usize = 32;
 const AEAD_NONCE_LEN: usize = 12;
-const AEAD_TAG_LEN: usize = 16;
 const ARGON2_OUT_CAP: usize = 512;
 
 type HmacSha256 = Hmac<Sha256>;
@@ -994,7 +993,7 @@ mod tests {
         let nonce = [0x22_u8; 12];
         let pt = b"coil-aead";
         let aad: [u8; 0] = [];
-        let mut ct = vec![0_u8; pt.len() + AEAD_TAG_LEN];
+        let mut ct = vec![0_u8; pt.len() + 16];
         let mut err = 0_i64;
         let n = unsafe {
             coil_crypto_chacha20_poly1305_encrypt(
