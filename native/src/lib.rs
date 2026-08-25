@@ -19,9 +19,15 @@ use getrandom::fill as getrandom_fill;
 use hasher::{Hasher, HasherAlg};
 use hmac::{Hmac, Mac};
 use sha2::{Digest, Sha256, Sha512};
+use std::cell::Cell;
 use subtle::ConstantTimeEq;
 use x25519_dalek::{PublicKey as X25519Public, StaticSecret as X25519Secret};
 use zeroize::Zeroize;
+
+thread_local! {
+    static LAST_ERROR: Cell<i64> = const { Cell::new(0) };
+    static LAST_I64: Cell<i64> = const { Cell::new(0) };
+}
 
 /// Error tags written to `err_out` (same order as userland `CryptoError`).
 #[repr(i64)]
@@ -47,6 +53,7 @@ const RC_ERR: i64 = -1;
 const RC_OK: i64 = 0;
 
 unsafe fn write_err(err_out: *mut i64, tag: CryptoErrorTag) {
+    LAST_ERROR.with(|c| c.set(tag as i64));
     if !err_out.is_null() {
         unsafe {
             *err_out = tag as i64;
@@ -136,6 +143,26 @@ unsafe fn digest_call(
 }
 
 /// Packed-buffer helper for Coil FFI marshalling (not a CRYPTO_WIRING name).
+#[no_mangle]
+pub extern "C" fn coil_crypto_null() -> *mut u8 {
+    std::ptr::null_mut()
+}
+
+#[no_mangle]
+pub extern "C" fn coil_crypto_last_error() -> i64 {
+    LAST_ERROR.with(|c| c.get())
+}
+
+#[no_mangle]
+pub extern "C" fn coil_crypto_last_i64() -> i64 {
+    LAST_I64.with(|c| c.get())
+}
+
+#[no_mangle]
+pub extern "C" fn coil_crypto_is_null(p: *const u8) -> i64 {
+    i64::from(p.is_null())
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn coil_crypto_alloc(n: u64) -> *mut u8 {
     if n == 0 {
@@ -416,15 +443,16 @@ pub unsafe extern "C" fn coil_crypto_random_bytes(
 
 #[no_mangle]
 pub unsafe extern "C" fn coil_crypto_random_u64(value_out: *mut i64, err_out: *mut i64) -> i64 {
-    if value_out.is_null() {
-        return unsafe { fail(err_out, CryptoErrorTag::InvalidInput) };
-    }
     let mut buf = [0_u8; 8];
     if let Err(e) = getrandom_fill(&mut buf) {
         return unsafe { fail(err_out, from_getrandom(e)) };
     }
-    unsafe {
-        *value_out = u64::from_le_bytes(buf) as i64;
+    let v = u64::from_le_bytes(buf) as i64;
+    LAST_I64.with(|c| c.set(v));
+    if !value_out.is_null() {
+        unsafe {
+            *value_out = v;
+        }
     }
     RC_OK
 }

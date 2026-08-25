@@ -52,6 +52,10 @@ int64_t coil_crypto_argon2id_verify(const uint8_t *password, uint64_t password_l
 
 int64_t coil_crypto_ct_eq(const uint8_t *a, uint64_t a_len, const uint8_t *b, uint64_t b_len);
 
+uint8_t *coil_crypto_null(void);
+int64_t coil_crypto_last_error(void);
+int64_t coil_crypto_last_i64(void);
+int64_t coil_crypto_is_null(const uint8_t *p);
 uint8_t *coil_crypto_alloc(uint64_t n);
 void coil_crypto_free(uint8_t *ptr, uint64_t n);
 void coil_crypto_store_u8(uint8_t *ptr, uint64_t i, int64_t v);
