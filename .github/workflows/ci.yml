@@ -7,18 +7,43 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CI: "true"
 
 jobs:
-  native:
-    name: native
+  test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: native
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: coil-crypto
+
+      - uses: actions/checkout@v4
+        with:
+          repository: ardax-corp/coil-lang
+          path: coil-lang
+
       - uses: dtolnay/rust-toolchain@stable
-      - name: Test
+
+      - name: Install libffi
+        run: sudo apt-get update && sudo apt-get install -y libffi-dev
+
+      - name: Native tests
+        working-directory: coil-crypto/native
         run: cargo test
-      - name: Release build
+
+      - name: Native release build
+        working-directory: coil-crypto/native
         run: cargo build --release
+
+      - name: Place libcrypto.so on FFI search path
+        working-directory: coil-crypto
+        run: cp native/target/release/libcrypto.so native/
+
+      - name: Build coil
+        working-directory: coil-lang
+        # Default features include virtual `crypto`, which shadows this package.
+        run: cargo build --no-default-features --features time
+
+      - name: Coil tests
+        working-directory: coil-crypto
+        run: ../coil-lang/target/debug/coil test
