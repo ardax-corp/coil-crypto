@@ -1,8 +1,10 @@
 # coil-crypto
 
-Userland cryptography for [coil](https://github.com/ardax-corp/coil-lang). Replaces the virtual `use crypto::{…}` HostInvoke module with an FFI package: RustCrypto in a cdylib (`libcrypto.so` / `.dylib` / `.dll`) plus Coil wrappers.
+Userland cryptography for [coil](https://github.com/ardax-corp/coil-lang). RustCrypto lives in a cdylib (`libcrypto.so` / `.dylib` / `.dll`) plus Coil wrappers. `use crypto::{…}` is this package, not a compiler builtin.
 
 Locked design (accepted [COI-214](https://linear.app/ardax/issue/COI-214/accept-coil-crypto-design)): [coil-crypto design (v1)](https://linear.app/ardax/document/coil-crypto-design-v1-f48b4876e457).
+
+To depend on it from another Coil project, see [docs/consume.md](docs/consume.md).
 
 ## Layout
 
@@ -25,10 +27,13 @@ Or:
 
 ```bash
 cd native && cargo test && cargo build --release
+# copy libcrypto.so / .dylib / crypto.dll into native/ so [ffi] search_paths finds it
 ```
 
 Argon2id MVP params are fixed (19 MiB, 2 iterations, parallelism 1) and not caller-tunable.
 
+Sibling consume is `[module] roots` plus `[ffi] search_paths` plus a built `libcrypto.so`. Details in [docs/consume.md](docs/consume.md).
+
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
