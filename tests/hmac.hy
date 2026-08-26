@@ -2,6 +2,22 @@
 use crypto::{hmac_sha256, hmac_sha512, hmac_verify_sha256, CryptoError, ct_eq};
 use string::{to_bytes};
 
+fn to_int(byte x) -> int {
+    return x as int;
+}
+
+fn to_byte(int n) -> byte {
+    return n as byte;
+}
+
+fn xor1(int n) -> int {
+    return n ^ 1;
+}
+
+fn xor_byte(byte x) -> byte {
+    return to_byte(xor1(to_int(x)));
+}
+
 fn nibble(int c) -> int {
     if c >= 48 && c <= 57 {
         return c - 48;
@@ -15,6 +31,12 @@ fn nibble(int c) -> int {
     panic "bad hex";
 }
 
+fn mix_nibbles(int hi, int lo) -> byte {
+    let shifted = hi << 4;
+    let v = shifted | lo;
+    return to_byte(v);
+}
+
 fn from_hex(string s) -> Vec<byte> {
     let raw = to_bytes(s);
     let n = len(raw);
@@ -22,11 +44,12 @@ fn from_hex(string s) -> Vec<byte> {
         panic "odd hex";
     }
     let o: Vec<byte> = Vec::new();
-    let i = 0;
+    let i: int = 0;
     while i < n {
-        let hi = nibble(raw[i] as int);
-        let lo = nibble(raw[i + 1] as int);
-        o.push(((hi << 4) | lo) as byte);
+        let b0: byte = raw[i];
+        let j: int = i + 1;
+        let b1: byte = raw[j];
+        o.push(mix_nibbles(nibble(to_int(b0)), nibble(to_int(b1))));
         i = i + 2;
     }
     return o;
@@ -47,7 +70,7 @@ fn xor_last(Vec<byte> tag) -> Vec<byte> {
     let o: Vec<byte> = Vec::new();
     for i in 0..n {
         if i == n - 1 {
-            o.push(((tag[i] as int) ^ 1) as byte);
+            o.push(xor_byte(tag[i]));
         } else {
             o.push(tag[i]);
         }

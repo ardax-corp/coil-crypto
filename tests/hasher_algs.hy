@@ -2,6 +2,14 @@
 use crypto::{init, update, finalize, Hasher, CryptoError, ct_eq};
 use string::{to_bytes};
 
+fn to_int(byte x) -> int {
+    return x as int;
+}
+
+fn to_byte(int n) -> byte {
+    return n as byte;
+}
+
 fn nibble(int c) -> int {
     if c >= 48 && c <= 57 {
         return c - 48;
@@ -15,6 +23,12 @@ fn nibble(int c) -> int {
     panic "bad hex";
 }
 
+fn mix_nibbles(int hi, int lo) -> byte {
+    let shifted = hi << 4;
+    let v = shifted | lo;
+    return to_byte(v);
+}
+
 fn from_hex(string s) -> Vec<byte> {
     let raw = to_bytes(s);
     let n = len(raw);
@@ -22,11 +36,12 @@ fn from_hex(string s) -> Vec<byte> {
         panic "odd hex";
     }
     let o: Vec<byte> = Vec::new();
-    let i = 0;
+    let i: int = 0;
     while i < n {
-        let hi = nibble(raw[i] as int);
-        let lo = nibble(raw[i + 1] as int);
-        o.push(((hi << 4) | lo) as byte);
+        let b0: byte = raw[i];
+        let j: int = i + 1;
+        let b1: byte = raw[j];
+        o.push(mix_nibbles(nibble(to_int(b0)), nibble(to_int(b1))));
         i = i + 2;
     }
     return o;
@@ -39,20 +54,16 @@ fn must_hasher(Result<Hasher, CryptoError> r) -> Hasher {
     };
 }
 
-fn must_digest(Hasher h, Vec<byte> data) -> Vec<byte> {
-    match update(h, data) {
+test("hasher sha512 abc") {
+    let h = must_hasher(init(1));
+    match update(h, to_bytes("abc")) {
         Result::Ok(_) => {},
         Result::Err(_) => panic "hasher update",
     };
-    return match finalize(h) {
+    let digest = match finalize(h) {
         Result::Ok(d) => d,
         Result::Err(_) => panic "hasher finalize",
     };
-}
-
-test("hasher sha512 abc") {
-    let h = must_hasher(init(1));
-    let digest = must_digest(h, to_bytes("abc"));
     let want = from_hex("ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f");
     assert(len(digest) == 64, "digest len")?;
     assert(ct_eq(digest, want), "sha512 abc")?;
@@ -64,7 +75,14 @@ test("hasher blake3 input_len 3") {
     data.push(1 as byte);
     data.push(2 as byte);
     let h = must_hasher(init(2));
-    let digest = must_digest(h, data);
+    match update(h, data) {
+        Result::Ok(_) => {},
+        Result::Err(_) => panic "hasher update",
+    };
+    let digest = match finalize(h) {
+        Result::Ok(d) => d,
+        Result::Err(_) => panic "hasher finalize",
+    };
     let want = from_hex("e1be4d7a8ab5560aa4199eea339849ba8e293d55ca0a81006726d184519e647f");
     assert(len(digest) == 32, "digest len")?;
     assert(ct_eq(digest, want), "blake3 inlen3")?;

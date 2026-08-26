@@ -12,12 +12,24 @@ fn fill_byte(int n, byte v) -> Vec<byte> {
     return o;
 }
 
+fn to_int(byte x) -> int {
+    return x as int;
+}
+
+fn xor1(int n) -> int {
+    return n ^ 1;
+}
+
+fn xor_byte(byte x) -> byte {
+    return xor1(to_int(x)) as byte;
+}
+
 fn xor_last(Vec<byte> ct) -> Vec<byte> {
     let n = len(ct);
     let o: Vec<byte> = Vec::new();
     for i in 0..n {
         if i == n - 1 {
-            o.push(((ct[i] as int) ^ 1) as byte);
+            o.push(xor_byte(ct[i]));
         } else {
             o.push(ct[i]);
         }

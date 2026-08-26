@@ -34,8 +34,9 @@ test("random_bytes too large is InvalidInput") {
 }
 
 test("random_u64 succeeds") {
-    match random_u64() {
-        Result::Ok(_) => {},
+    let n = match random_u64() {
+        Result::Ok(v) => v,
         Result::Err(_) => panic "random_u64",
     };
+    assert(n == n, "u64 bound")?;
 }
