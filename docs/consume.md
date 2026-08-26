@@ -35,9 +35,24 @@ let digest = sha256(to_bytes("hello"))?;
 
 ## coil.lock pin (until spool)
 
-[COI-219](https://linear.app/ardax/issue/COI-219) is the cut that tags tls, crypto, and regex together and switches consumers to `spool add`. Until then, do not write `crypto = { git = "…", version = "^0.1" }` and do not run `spool add crypto`. Those do not resolve. The compiler does not read `coil.lock` and does not inject roots.
+Sibling checkout above is the path that works today. If the consumer manifest declares a git dep, coil-lang still requires `{ git, version }` or it is E0900. `version` is a parser field, not a tag. This repo has no tags. Do not treat `^0.1` as a resolved pin. Git-only `{ git }` is [COI-220](https://linear.app/ardax/issue/COI-220), not this ticket. Do not run `spool add`.
 
-Pin this package in the consumer `coil.lock` with `git`, `rev`, and `content_hash`. Omit `tag`.
+The pin is `coil.lock` `rev` + `content_hash` until [COI-219](https://linear.app/ardax/issue/COI-219). Omit `tag`. The compiler does not read `coil.lock` and does not inject roots.
+
+Parseable consumer `coil.toml`:
+
+```toml
+[dependencies]
+crypto = { git = "https://github.com/ardax-corp/coil-crypto.git", version = "^0.1" }
+
+[module]
+roots = ["./src", "./.spool/deps/crypto/src"]
+
+[ffi]
+search_paths = ["./.spool/deps/crypto/native"]
+```
+
+`coil.lock`:
 
 ```
 # spool lockfile v1
@@ -50,21 +65,13 @@ content_hash = '808dec9957d989eb20315f41b50740ff34afba85'
 
 `rev` is the commit. `content_hash` is that commit's git tree (`git rev-parse 'HEAD^{tree}'`). Replace both when you move the pin. The values above are `main` at `5934ada` (userland package + RustCrypto cdylib). They are an example, not a release.
 
-Clone that rev onto a path you then list in `coil.toml`. `.spool/deps/crypto` is the layout spool will use later:
+Clone that rev onto the path in `roots`. `.spool/deps/crypto` is the layout spool will use later:
 
 ```bash
 git clone https://github.com/ardax-corp/coil-crypto.git .spool/deps/crypto
 git -C .spool/deps/crypto checkout --detach 5934ada57c4eb580dea81881c0419ed12b53a2ad
 test "$(git -C .spool/deps/crypto rev-parse 'HEAD^{tree}')" = 808dec9957d989eb20315f41b50740ff34afba85
 make -C .spool/deps/crypto
-```
-
-```toml
-[module]
-roots = ["./src", "./.spool/deps/crypto/src"]
-
-[ffi]
-search_paths = ["./.spool/deps/crypto/native"]
 ```
 
 `make` copies `libcrypto.so` (or `.dylib` / `crypto.dll`) into that `native/` dir. Leave it on `[ffi] search_paths`. Spool will not fetch the cdylib until [COI-60](https://linear.app/ardax/issue/COI-60).
