@@ -4,8 +4,6 @@ Userland cryptography for [coil](https://github.com/ardax-corp/coil-lang). RustC
 
 Locked design (accepted [COI-214](https://linear.app/ardax/issue/COI-214/accept-coil-crypto-design)): [coil-crypto design (v1)](https://linear.app/ardax/document/coil-crypto-design-v1-f48b4876e457).
 
-To depend on it from another Coil project, see [docs/consume.md](docs/consume.md).
-
 ## Layout
 
 | Path | Role |
@@ -32,7 +30,9 @@ cd native && cargo test && cargo build --release
 
 Argon2id MVP params are fixed (19 MiB, 2 iterations, parallelism 1) and not caller-tunable.
 
-Sibling consume is `[module] roots` plus `[ffi] search_paths` plus a built `libcrypto.so`. Details in [docs/consume.md](docs/consume.md).
+Consume from a sibling checkout or a `coil.lock` pin (`rev` + `content_hash`). See [docs/consume.md](docs/consume.md).
+
+Spool will own Coil-to-Coil deps once it exists ([COI-219](https://linear.app/ardax/issue/COI-219)). Until then there is no `spool add` and this repo has no tags. Native libs stay on `[ffi] search_paths` until [COI-60](https://linear.app/ardax/issue/COI-60).
 
 ## License
 

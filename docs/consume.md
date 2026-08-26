@@ -1,10 +1,12 @@
 # Consuming coil-crypto
 
-Package name is `crypto`. `use crypto::{sha256}` is a module-not-found error unless this package's `src/` is on `[module] roots`. The VM does not register crypto HostInvoke slots.
+This package is `crypto`. `use crypto::{sha256}` resolves from this repo's `src/`. RustCrypto lives in `libcrypto.so` / `.dylib` / `crypto.dll`. `extern "crypto"` in `src/crypto.hy` already calls `dload("crypto")`. Put the built library on `[ffi] search_paths`. The VM does not register crypto HostInvoke slots. `use crypto` without this package on `roots` is a module-not-found error.
+
+Coil-to-Coil deps will be spool-owned once a public `spool` CLI exists. Until [COI-219](https://linear.app/ardax/issue/COI-219) this repo has no git tags and there is no `spool add`. Pin `rev` + `content_hash` in `coil.lock` if you are not on a sibling checkout. Native libs stay on `[ffi] search_paths` until [COI-60](https://linear.app/ardax/issue/COI-60).
 
 ## Sibling checkout
 
-Clone this repo beside your project. In the consumer `coil.toml`:
+In the consumer `coil.toml`:
 
 ```toml
 [module]
@@ -14,20 +16,13 @@ roots = ["./src", "../coil-crypto/src"]
 search_paths = ["../coil-crypto/native"]
 ```
 
-A path dep is optional metadata for spool later. The compiler still needs those two lists:
-
-```toml
-[dependencies]
-crypto = { path = "../coil-crypto" }
-```
-
-Build the native library from this package root so `dload("crypto")` can find it:
+Build the native library from this package root:
 
 ```bash
 make
 ```
 
-That copies `libcrypto.so` (or `libcrypto.dylib` / `crypto.dll`) next to `native/crypto.h`. Coil resolves `dload("crypto")` via `[ffi] search_paths` to `libcrypto.so` / `libcrypto.dylib` / `crypto.dll`. `extern "crypto"` in `src/crypto.hy` already does that load. Application code imports the Coil wrappers. It does not call `dload` itself.
+`libcrypto.so` (or `.dylib` / `crypto.dll`) must sit on `[ffi] search_paths` so `dload("crypto")` resolves. `roots` must include this package's `src/` so `use crypto::{…}` resolves here. Application code imports the Coil wrappers. It does not call `dload` itself.
 
 Then:
 
@@ -38,24 +33,41 @@ use string::{to_bytes};
 let digest = sha256(to_bytes("hello"))?;
 ```
 
-## Until spool
+## coil.lock pin (until spool)
 
-There is no public `spool` CLI and this repo has no git tags. Do not put `spool add` or `version = "^0.1"` in a consumer manifest.
+[COI-219](https://linear.app/ardax/issue/COI-219) is the cut that tags tls, crypto, and regex together and switches consumers to `spool add`. Until then, do not write `crypto = { git = "…", version = "^0.1" }` and do not run `spool add crypto`. Those do not resolve. The compiler does not read `coil.lock` and does not inject roots.
 
-Spool will own Coil-to-Coil deps once it exists. Until [COI-219](https://linear.app/ardax/issue/COI-219) tags tls, crypto, and regex together, a git pin lives in `coil.lock` as `rev` plus `content_hash`:
+Pin this package in the consumer `coil.lock` with `git`, `rev`, and `content_hash`. Omit `tag`.
 
 ```
 # spool lockfile v1
 [[package]]
 name = 'crypto'
 git = 'https://github.com/ardax-corp/coil-crypto.git'
-rev = '<commit sha>'
-content_hash = '<git tree id>'
+rev = '5934ada57c4eb580dea81881c0419ed12b53a2ad'
+content_hash = '808dec9957d989eb20315f41b50740ff34afba85'
 ```
 
-The compiler does not read `coil.lock` and does not inject roots. Point `[module] roots` at the checkout of that rev.
+`rev` is the commit. `content_hash` is that commit's git tree (`git rev-parse 'HEAD^{tree}'`). Replace both when you move the pin. The values above are `main` at `5934ada` (userland package + RustCrypto cdylib). They are an example, not a release.
 
-Native `libcrypto` stays on `[ffi] search_paths` until [COI-60](https://linear.app/ardax/issue/COI-60). Spool does not ship the `.so`.
+Clone that rev onto a path you then list in `coil.toml`. `.spool/deps/crypto` is the layout spool will use later:
+
+```bash
+git clone https://github.com/ardax-corp/coil-crypto.git .spool/deps/crypto
+git -C .spool/deps/crypto checkout --detach 5934ada57c4eb580dea81881c0419ed12b53a2ad
+test "$(git -C .spool/deps/crypto rev-parse 'HEAD^{tree}')" = 808dec9957d989eb20315f41b50740ff34afba85
+make -C .spool/deps/crypto
+```
+
+```toml
+[module]
+roots = ["./src", "./.spool/deps/crypto/src"]
+
+[ffi]
+search_paths = ["./.spool/deps/crypto/native"]
+```
+
+`make` copies `libcrypto.so` (or `.dylib` / `crypto.dll`) into that `native/` dir. Leave it on `[ffi] search_paths`. Spool will not fetch the cdylib until [COI-60](https://linear.app/ardax/issue/COI-60).
 
 ## Call it
 
