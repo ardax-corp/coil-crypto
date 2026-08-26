@@ -35,13 +35,13 @@ let digest = sha256(to_bytes("hello"))?;
 
 ## Git dep and coil.lock
 
-A git dep in `coil.toml` still needs `{ git, version }` or coil reports E0900. `version` is a parser field so the manifest parses. It is not a git tag. Do not treat `^0.1` as a resolved pin. Git-only `{ git }` is [COI-220](https://linear.app/ardax/issue/COI-220). There is no public `spool` CLI. Do not run `spool add`.
+`{ git }` is the parseable form. `version` is optional schema, not a tag. `rev` on the dep is stored only. There is no public `spool` CLI. Do not run `spool add`.
 
 Parseable example:
 
 ```toml
 [dependencies]
-crypto = { git = "https://github.com/ardax-corp/coil-crypto.git", version = "^0.1" }
+crypto = { git = "https://github.com/ardax-corp/coil-crypto.git" }
 
 [module]
 roots = ["./src", "./.spool/deps/crypto/src"]

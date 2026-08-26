@@ -32,7 +32,7 @@ Argon2id MVP params are fixed (19 MiB, 2 iterations, parallelism 1) and not call
 
 Consume from a sibling checkout or a `coil.lock` pin (`rev` + `content_hash`). See [docs/consume.md](docs/consume.md).
 
-Spool will own Coil-to-Coil deps once it exists ([COI-219](https://linear.app/ardax/issue/COI-219)). Until then there is no `spool add` and this repo has no tags. A git dep in `coil.toml` still needs `version` so the file parses (E0900). That field is not a tag pin. Native libs stay on `[ffi] search_paths` until [COI-60](https://linear.app/ardax/issue/COI-60).
+Spool will own Coil-to-Coil deps once it exists ([COI-219](https://linear.app/ardax/issue/COI-219)). Until then there is no `spool add` and this repo has no tags. `{ git }` is the parseable git dep. `version` is optional schema, not a tag. Native libs stay on `[ffi] search_paths` until [COI-60](https://linear.app/ardax/issue/COI-60).
 
 ## License
 
