@@ -17,7 +17,7 @@ fn expect_invalid_length(Result<Vec<byte>, CryptoError> r) {
         Result::Ok(_) => panic "expected InvalidLength",
         Result::Err(e) => match e {
             CryptoError::InvalidLength => {},
-            _ => panic "wrong error",
+            default => panic "wrong error",
         },
     };
 }

@@ -93,7 +93,7 @@ test("hasher init 99 is UnsupportedAlgorithm") {
         Result::Ok(_) => panic "expected UnsupportedAlgorithm",
         Result::Err(e) => match e {
             CryptoError::UnsupportedAlgorithm => {},
-            _ => panic "wrong error",
+            default => panic "wrong error",
         },
     };
 }

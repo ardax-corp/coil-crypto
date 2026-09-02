@@ -41,9 +41,8 @@ jobs:
 
       - name: Build coil
         working-directory: coil-lang
-        # Default features include virtual `crypto`, which shadows this package.
-        run: cargo build --no-default-features --features time
+        run: cargo build
 
       - name: Coil tests
         working-directory: coil-crypto
-        run: ../coil-lang/target/debug/coil test
+        run: ../coil-lang/target/debug/coil test --allow-dload crypto --ffi-search-path native

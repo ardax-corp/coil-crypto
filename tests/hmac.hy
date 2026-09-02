@@ -115,7 +115,7 @@ test("hmac verify sha256 ok and bad tag") {
         Result::Ok(_) => panic "expected AuthenticationFailed",
         Result::Err(e) => match e {
             CryptoError::AuthenticationFailed => {},
-            _ => panic "wrong error",
+            default => panic "wrong error",
         },
     };
 }
