@@ -61,8 +61,8 @@ enum CryptoError {
 }
 
 class Hasher {
-    pub handle: ptr,
-    pub live: bool,
+    handle: ptr,
+    live: bool,
 }
 
 fn err_ptr() -> ptr {
@@ -156,32 +156,6 @@ fn init(int alg) -> Result<Hasher, CryptoError> {
     return new Hasher(h, true);
 }
 
-fn update(Hasher h, Vec<byte> data) -> Result<(), CryptoError> {
-    let n = len(data);
-    let src = copy_in(data);
-    let rc = coil_crypto_hasher_update(h.handle, src, n, err_ptr());
-    coil_crypto_free(src, n);
-    if rc < 0 {
-        raise err_from(coil_crypto_last_error());
-    }
-    return ();
-}
-
-fn finalize(Hasher h) -> Result<Vec<byte>, CryptoError> {
-    let out = coil_crypto_alloc(64);
-    let rc = coil_crypto_hasher_finalize(h.handle, out, 64, err_ptr());
-    let n = rc;
-    if rc < 0 {
-        n = 0;
-    }
-    let bytes = copy_out(out, n);
-    coil_crypto_free(out, 64);
-    if rc < 0 {
-        raise err_from(coil_crypto_last_error());
-    }
-    return bytes;
-}
-
 impl Hasher {
     fn drop() {
         if self.live {
@@ -189,6 +163,40 @@ impl Hasher {
             self.live = false;
         }
     }
+
+    pub fn update(Vec<byte> data) -> Result<(), CryptoError> {
+        let n = len(data);
+        let src = copy_in(data);
+        let rc = coil_crypto_hasher_update(self.handle, src, n, err_ptr());
+        coil_crypto_free(src, n);
+        if rc < 0 {
+            raise err_from(coil_crypto_last_error());
+        }
+        return ();
+    }
+
+    pub fn finalize() -> Result<Vec<byte>, CryptoError> {
+        let out = coil_crypto_alloc(64);
+        let rc = coil_crypto_hasher_finalize(self.handle, out, 64, err_ptr());
+        let n = rc;
+        if rc < 0 {
+            n = 0;
+        }
+        let bytes = copy_out(out, n);
+        coil_crypto_free(out, 64);
+        if rc < 0 {
+            raise err_from(coil_crypto_last_error());
+        }
+        return bytes;
+    }
+}
+
+fn update(Hasher h, Vec<byte> data) -> Result<(), CryptoError> {
+    return h.update(data)?;
+}
+
+fn finalize(Hasher h) -> Result<Vec<byte>, CryptoError> {
+    return h.finalize()?;
 }
 
 fn hmac_sha256(Vec<byte> key, Vec<byte> data) -> Result<Vec<byte>, CryptoError> {
