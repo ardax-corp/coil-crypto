@@ -28,7 +28,7 @@ test("random_bytes too large is InvalidInput") {
         Result::Ok(_) => panic "expected InvalidInput",
         Result::Err(e) => match e {
             CryptoError::InvalidInput => {},
-            _ => panic "wrong error",
+            default => panic "wrong error",
         },
     };
 }

@@ -27,7 +27,7 @@ test("argon2id hash then verify") {
         Result::Ok(_) => panic "expected AuthenticationFailed",
         Result::Err(e) => match e {
             CryptoError::AuthenticationFailed => {},
-            _ => panic "wrong error",
+            default => panic "wrong error",
         },
     };
 }
@@ -38,7 +38,7 @@ test("argon2id empty salt is InvalidLength") {
         Result::Ok(_) => panic "expected InvalidLength",
         Result::Err(e) => match e {
             CryptoError::InvalidLength => {},
-            _ => panic "wrong error",
+            default => panic "wrong error",
         },
     };
 }
@@ -48,7 +48,7 @@ test("argon2id verify garbage hash is InvalidInput") {
         Result::Ok(_) => panic "expected InvalidInput",
         Result::Err(e) => match e {
             CryptoError::InvalidInput => {},
-            _ => panic "wrong error",
+            default => panic "wrong error",
         },
     };
 }

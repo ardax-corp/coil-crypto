@@ -57,7 +57,7 @@ test("chacha20 roundtrip and tamper") {
         Result::Ok(_) => panic "expected AuthenticationFailed",
         Result::Err(e) => match e {
             CryptoError::AuthenticationFailed => {},
-            _ => panic "wrong error",
+            default => panic "wrong error",
         },
     };
 }

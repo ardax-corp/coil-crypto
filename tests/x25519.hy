@@ -38,7 +38,7 @@ test("x25519 short key is InvalidLength") {
         Result::Ok(_) => panic "expected InvalidLength",
         Result::Err(e) => match e {
             CryptoError::InvalidLength => {},
-            _ => panic "wrong error",
+            default => panic "wrong error",
         },
     };
 }

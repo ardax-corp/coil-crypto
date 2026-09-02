@@ -63,7 +63,7 @@ test("hasher abc then AlreadyFinalized") {
         Result::Ok(_) => panic "expected AlreadyFinalized",
         Result::Err(e) => match e {
             CryptoError::AlreadyFinalized => {},
-            _ => panic "wrong error",
+            default => panic "wrong error",
         },
     };
 }

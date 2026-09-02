@@ -61,7 +61,7 @@ test("ed25519 generate sign verify and tamper") {
         Result::Ok(_) => panic "expected AuthenticationFailed",
         Result::Err(e) => match e {
             CryptoError::AuthenticationFailed => {},
-            _ => panic "wrong error",
+            default => panic "wrong error",
         },
     };
 }
@@ -73,7 +73,7 @@ test("ed25519 sign short key is InvalidLength") {
         Result::Ok(_) => panic "expected InvalidLength",
         Result::Err(e) => match e {
             CryptoError::InvalidLength => {},
-            _ => panic "wrong error",
+            default => panic "wrong error",
         },
     };
 }
