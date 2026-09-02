@@ -61,8 +61,8 @@ enum CryptoError {
 }
 
 class Hasher {
-    handle: ptr,
-    live: bool,
+    pub handle: ptr,
+    pub live: bool,
 }
 
 fn err_ptr() -> ptr {
