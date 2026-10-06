@@ -17,15 +17,7 @@ jobs:
         with:
           path: coil-crypto
 
-      - uses: actions/checkout@v4
-        with:
-          repository: ardax-corp/coil-lang
-          path: coil-lang
-
       - uses: dtolnay/rust-toolchain@stable
-
-      - name: Install libffi
-        run: sudo apt-get update && sudo apt-get install -y libffi-dev
 
       - name: Native tests
         working-directory: coil-crypto/native
@@ -39,10 +31,11 @@ jobs:
         working-directory: coil-crypto
         run: cp native/target/release/libcrypto.so native/
 
-      - name: Build coil
-        working-directory: coil-lang
-        run: cargo build
+      # coil comes from the coil-lang `edge` release (a snapshot of its main,
+      # rebuilt after every green coil-lang CI run) instead of a source build.
+      - name: Install coil (edge)
+        uses: ardax-corp/coil-lang/.github/actions/setup-coil@main
 
       - name: Coil tests
         working-directory: coil-crypto
-        run: ../coil-lang/target/debug/coil test --allow-dload crypto --ffi-search-path native
+        run: coil test --allow-dload crypto --ffi-search-path native
