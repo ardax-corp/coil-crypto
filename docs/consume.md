@@ -22,7 +22,7 @@ Build the native library from this package root:
 make
 ```
 
-`libcrypto.so` (or `.dylib` / `crypto.dll`) must sit on `[ffi] search_paths` so `dload("crypto")` resolves. `roots` must include this package's `src/` so `use crypto::{…}` resolves here. Application code imports the Coil wrappers. It does not call `dload` itself.
+`libcrypto.so` (or `.dylib` / `crypto.dll`) must sit on `[ffi] search_paths` so `dload("crypto")` resolves. `roots` must include this package's `src/` so `use crypto::{…}` resolves here. Application code imports the Coil wrappers. It does not call `dload` itself. The run needs `--allow-dload crypto` and `--dload-trusted crypto` (or `--dload-pin crypto=SHA256`); spool passes the second from `trusted = true` on the dependency or a `coil.lock` native pin.
 
 Then:
 

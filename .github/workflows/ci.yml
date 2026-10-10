@@ -38,4 +38,4 @@ jobs:
 
       - name: Coil tests
         working-directory: coil-crypto
-        run: coil test --allow-dload crypto --ffi-search-path native
+        run: coil test --allow-dload crypto --dload-trusted crypto --ffi-search-path native
