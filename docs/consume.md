@@ -1,30 +1,42 @@
 # Consuming coil-crypto
 
-This package is `crypto`. `use crypto::{sha256}` resolves from this repo's `src/`. RustCrypto lives in `libcrypto.so` / `.dylib` / `crypto.dll`. `extern "crypto"` in `src/crypto.hy` already calls `dload("crypto")`. Put the built library on `[ffi] search_paths`. The VM does not register crypto HostInvoke slots. `use crypto` without this package on `roots` is a module-not-found error.
+This package is `crypto`. `use crypto::{sha256}` resolves from this repo's `src/`. RustCrypto lives in `libcrypto.so` / `.dylib` / `crypto.dll`. `extern "crypto"` in `src/crypto.hy` already calls `dload("crypto")`. Put the built library on the FFI search path (`--ffi-search-path`). The VM does not register crypto HostInvoke slots. `use crypto` without this package's `src/` as a `--root` is a module-not-found error.
 
-Coil-to-Coil deps will be spool-owned once a public `spool` CLI exists. Until [COI-219](https://linear.app/ardax/issue/COI-219) this repo has no git tags and there is no `spool add`. Pin `rev` + `content_hash` in `coil.lock` if you are not on a sibling checkout. Native libs stay on `[ffi] search_paths` until [COI-60](https://linear.app/ardax/issue/COI-60).
+## Depend on it
 
-## Sibling checkout
-
-This is the working path. Clone this repo next to your project. In the consumer `coil.toml`:
-
-```toml
-[module]
-roots = ["./src", "../coil-crypto/src"]
-
-[ffi]
-search_paths = ["../coil-crypto/native"]
-```
-
-Build the native library from this package root:
+With [spool](https://github.com/ardax-corp/spool):
 
 ```bash
-make
+spool add crypto --git https://github.com/ardax-corp/coil-crypto.git --rev <commit SHA>
 ```
 
-`libcrypto.so` (or `.dylib` / `crypto.dll`) must sit on `[ffi] search_paths` so `dload("crypto")` resolves. `roots` must include this package's `src/` so `use crypto::{…}` resolves here. Application code imports the Coil wrappers. It does not call `dload` itself. The run needs `--allow-dload crypto` and `--dload-trusted crypto` (or `--dload-pin crypto=SHA256`); spool passes the second from `trusted = true` on the dependency or a `coil.lock` native pin.
+This repo has no tags, so pin a commit with `--rev`. spool records the dep in `coil.toml`, writes `coil.lock` (`rev` + `content_hash`), links `.spool/deps/crypto`, and passes `--root` for it and coil-stdlib to `coil`.
 
-Then:
+spool links only `src/`. Build the native library in a checkout of this repo (`make` copies `libcrypto.so` / `.dylib` / `crypto.dll` into `native/`) and grant it in the consumer `coil.toml`:
+
+```toml
+[ffi]
+search_paths = ["../coil-crypto/native"]
+allow = ["crypto"]
+
+[dependencies]
+crypto = { git = "https://github.com/ardax-corp/coil-crypto.git", rev = "<commit SHA>", trusted = true }
+```
+
+spool turns these into `--ffi-search-path ../coil-crypto/native --allow-dload crypto --dload-trusted crypto`. Instead of `trusted = true`, a `[[package.native]]` row with the library's `sha256` under the `crypto` package in `coil.lock` gives `--dload-pin crypto=SHA256`.
+
+## Plain coil
+
+Clone this repo next to your project, run `make` there, and pass everything as flags. coil reads no `coil.toml` and no `coil.lock`.
+
+```bash
+make -C ../coil-crypto
+coil --root ../coil-crypto/src \
+  --ffi-search-path ../coil-crypto/native \
+  --allow-dload crypto --dload-trusted crypto main.hy
+```
+
+Use `--dload-pin crypto=<sha256 of libcrypto.so>` instead of `--dload-trusted crypto` to pin the build. Application code imports the Coil wrappers. It does not call `dload` itself.
 
 ```coil
 use crypto::{sha256, random_bytes, ct_eq, CryptoError};
@@ -32,49 +44,6 @@ use string::{to_bytes};
 
 let digest = sha256(to_bytes("hello"))?;
 ```
-
-## Git dep and coil.lock
-
-`{ git }` is the parseable form. `version` is optional schema, not a tag. `rev` on the dep is stored only. There is no public `spool` CLI. Do not run `spool add`.
-
-Parseable example:
-
-```toml
-[dependencies]
-crypto = { git = "https://github.com/ardax-corp/coil-crypto.git" }
-
-[module]
-roots = ["./src", "./.spool/deps/crypto/src"]
-
-[ffi]
-search_paths = ["./.spool/deps/crypto/native"]
-```
-
-This repo has no tags until [COI-219](https://linear.app/ardax/issue/COI-219). The pin is `coil.lock` `rev` + `content_hash`. Omit `tag`. Use sibling checkout until spool materializes `.spool/deps`. The compiler does not read `coil.lock` and does not inject roots.
-
-`coil.lock`:
-
-```
-# spool lockfile v1
-[[package]]
-name = 'crypto'
-git = 'https://github.com/ardax-corp/coil-crypto.git'
-rev = '5934ada57c4eb580dea81881c0419ed12b53a2ad'
-content_hash = '808dec9957d989eb20315f41b50740ff34afba85'
-```
-
-`rev` is the commit. `content_hash` is that commit's git tree (`git rev-parse 'HEAD^{tree}'`). Replace both when you move the pin. The values above are `main` at `5934ada` (userland package + RustCrypto cdylib). They are an example, not a release.
-
-If you vendor that rev yourself, `.spool/deps/crypto` matches the later spool layout:
-
-```bash
-git clone https://github.com/ardax-corp/coil-crypto.git .spool/deps/crypto
-git -C .spool/deps/crypto checkout --detach 5934ada57c4eb580dea81881c0419ed12b53a2ad
-test "$(git -C .spool/deps/crypto rev-parse 'HEAD^{tree}')" = 808dec9957d989eb20315f41b50740ff34afba85
-make -C .spool/deps/crypto
-```
-
-`make` copies `libcrypto.so` (or `.dylib` / `crypto.dll`) into that `native/` dir. Leave it on `[ffi] search_paths`. Native libs stay on `[ffi] search_paths` until [COI-60](https://linear.app/ardax/issue/COI-60).
 
 ## Call it
 
