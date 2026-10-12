@@ -1,4 +1,5 @@
 // Argon2id hash then verify; bad password fails; empty salt / garbage hash named errors.
+use tests::assert;
 use crypto::{argon2id_hash, argon2id_verify, CryptoError};
 use string::{to_bytes};
 
@@ -20,7 +21,9 @@ test("argon2id hash then verify") {
         Result::Err(_) => panic "hash",
     };
     match argon2id_verify(password, encoded) {
-        Result::Ok(b) => assert(b, "verify ok")?,
+        Result::Ok(b) => {
+            assert!(b, "verify ok");
+        },
         Result::Err(_) => panic "verify failed",
     };
     match argon2id_verify(to_bytes("wrong-password"), encoded) {

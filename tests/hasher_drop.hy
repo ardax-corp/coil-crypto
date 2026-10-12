@@ -1,5 +1,6 @@
 // Hasher.drop frees the native handle; a second drop is a no-op.
 // Going out of scope then gc::collect exercises the finalizer path.
+use tests::assert;
 use crypto::{init, Hasher, CryptoError};
 use gc::{collect};
 
@@ -14,7 +15,7 @@ test("hasher drop is idempotent") {
     let h = must_hasher(init(0));
     h.drop();
     h.drop();
-    assert(true)?;
+    assert!(true);
 }
 
 fn ephemeral_hasher() {
@@ -24,12 +25,12 @@ fn ephemeral_hasher() {
 test("hasher drop across collect") {
     ephemeral_hasher();
     collect();
-    assert(true)?;
+    assert!(true);
 }
 
 test("hasher explicit drop then collect") {
     let h = must_hasher(init(1));
     h.drop();
     collect();
-    assert(true)?;
+    assert!(true);
 }

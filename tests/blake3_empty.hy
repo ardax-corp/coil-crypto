@@ -1,5 +1,6 @@
 // BLAKE3 KAT: empty input, 32-byte default hash
 // (BLAKE3-team test_vectors.json, input_len=0).
+use tests::assert;
 use crypto::{blake3, ct_eq, CryptoError};
 use string::{to_bytes};
 
@@ -54,6 +55,6 @@ test("blake3 empty official") {
         Result::Err(_) => panic "blake3 empty",
     };
     let want = from_hex("af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262");
-    assert(len(digest) == 32, "digest len")?;
-    assert(ct_eq(digest, want), "official empty")?;
+    assert!(len(digest) == 32, "digest len");
+    assert!(ct_eq(digest, want), "official empty");
 }

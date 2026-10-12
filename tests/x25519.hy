@@ -1,4 +1,5 @@
 // X25519: both generated sides match; short key is InvalidLength.
+use tests::assert;
 use crypto::{x25519_generate, x25519_shared_secret, CryptoError, ct_eq};
 
 fn fill_byte(int n, byte v) -> Vec<byte> {
@@ -28,8 +29,8 @@ test("x25519 both sides match") {
         Result::Ok(s) => s,
         Result::Err(_) => panic "shared ba",
     };
-    assert(len(ab) == 32, "shared len")?;
-    assert(ct_eq(ab, ba), "dh match")?;
+    assert!(len(ab) == 32, "shared len");
+    assert!(ct_eq(ab, ba), "dh match");
 }
 
 test("x25519 short key is InvalidLength") {

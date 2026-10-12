@@ -1,4 +1,5 @@
 // Ed25519 generate/sign/verify roundtrip; tamper last byte → AuthenticationFailed.
+use tests::assert;
 use crypto::{ed25519_generate, ed25519_sign, ed25519_verify, CryptoError, ct_eq};
 use string::{to_bytes};
 
@@ -44,16 +45,18 @@ test("ed25519 generate sign verify and tamper") {
     };
     let sk = kp[0];
     let pk = kp[1];
-    assert(len(sk) == 32, "sk len")?;
-    assert(len(pk) == 32, "pk len")?;
+    assert!(len(sk) == 32, "sk len");
+    assert!(len(pk) == 32, "pk len");
     let msg = to_bytes("coil-ed25519");
     let sig = match ed25519_sign(sk, msg) {
         Result::Ok(s) => s,
         Result::Err(_) => panic "sign",
     };
-    assert(len(sig) == 64, "sig len")?;
+    assert!(len(sig) == 64, "sig len");
     match ed25519_verify(pk, msg, sig) {
-        Result::Ok(b) => assert(b, "verify ok")?,
+        Result::Ok(b) => {
+            assert!(b, "verify ok");
+        },
         Result::Err(_) => panic "verify failed",
     };
     let bad = xor_last(sig);
