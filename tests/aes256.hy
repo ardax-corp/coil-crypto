@@ -1,4 +1,5 @@
 // AES-256-GCM roundtrip; tamper last byte → AuthenticationFailed.
+use tests::assert;
 use crypto::{aes_256_gcm_encrypt, aes_256_gcm_decrypt, CryptoError, ct_eq};
 use string::{to_bytes};
 
@@ -46,12 +47,12 @@ test("aes256-gcm roundtrip and tamper") {
         Result::Ok(d) => d,
         Result::Err(_) => panic "encrypt failed",
     };
-    assert(len(ct) > len(pt), "tag present")?;
+    assert!(len(ct) > len(pt), "tag present");
     let got = match aes_256_gcm_decrypt(key, nonce, ct, aad) {
         Result::Ok(d) => d,
         Result::Err(_) => panic "decrypt failed",
     };
-    assert(ct_eq(got, pt), "roundtrip")?;
+    assert!(ct_eq(got, pt), "roundtrip");
     let bad = xor_last(ct);
     match aes_256_gcm_decrypt(key, nonce, bad, aad) {
         Result::Ok(_) => panic "expected AuthenticationFailed",

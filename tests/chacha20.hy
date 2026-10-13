@@ -1,4 +1,5 @@
 // ChaCha20-Poly1305 roundtrip; tamper last byte → AuthenticationFailed.
+use tests::assert;
 use crypto::{chacha20_poly1305_encrypt, chacha20_poly1305_decrypt, CryptoError, ct_eq};
 use string::{to_bytes};
 
@@ -46,12 +47,12 @@ test("chacha20 roundtrip and tamper") {
         Result::Ok(d) => d,
         Result::Err(_) => panic "encrypt failed",
     };
-    assert(len(ct) > len(pt), "tag present")?;
+    assert!(len(ct) > len(pt), "tag present");
     let got = match chacha20_poly1305_decrypt(key, nonce, ct, aad) {
         Result::Ok(d) => d,
         Result::Err(_) => panic "decrypt failed",
     };
-    assert(ct_eq(got, pt), "roundtrip")?;
+    assert!(ct_eq(got, pt), "roundtrip");
     let bad = xor_last(ct);
     match chacha20_poly1305_decrypt(key, nonce, bad, aad) {
         Result::Ok(_) => panic "expected AuthenticationFailed",

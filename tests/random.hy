@@ -1,4 +1,5 @@
 // random_bytes / random_u64 succeed; oversized n is InvalidInput.
+use tests::assert;
 use crypto::{random_bytes, random_u64, CryptoError, ct_eq};
 
 test("random_bytes length and distinct draws") {
@@ -10,9 +11,9 @@ test("random_bytes length and distinct draws") {
         Result::Ok(d) => d,
         Result::Err(_) => panic "random_bytes b",
     };
-    assert(len(a) == 32, "len a")?;
-    assert(len(b) == 32, "len b")?;
-    assert(ct_eq(a, b) == false, "draws should differ")?;
+    assert!(len(a) == 32, "len a");
+    assert!(len(b) == 32, "len b");
+    assert!(ct_eq(a, b) == false, "draws should differ");
 }
 
 test("random_bytes empty") {
@@ -20,7 +21,7 @@ test("random_bytes empty") {
         Result::Ok(d) => d,
         Result::Err(_) => panic "random_bytes 0",
     };
-    assert(len(z) == 0, "empty")?;
+    assert!(len(z) == 0, "empty");
 }
 
 test("random_bytes too large is InvalidInput") {
@@ -38,5 +39,5 @@ test("random_u64 succeeds") {
         Result::Ok(v) => v,
         Result::Err(_) => panic "random_u64",
     };
-    assert(n == n, "u64 bound")?;
+    assert!(n == n, "u64 bound");
 }

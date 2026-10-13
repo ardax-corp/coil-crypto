@@ -1,4 +1,5 @@
 // NIST SHA-512 KAT: empty string (FIPS 180-4 / SHA512.pdf).
+use tests::assert;
 use crypto::{sha512, ct_eq, CryptoError};
 use string::{to_bytes};
 
@@ -53,6 +54,6 @@ test("sha512 empty string NIST") {
         Result::Err(_) => panic "sha512 empty",
     };
     let want = from_hex("cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e");
-    assert(len(digest) == 64, "digest len")?;
-    assert(ct_eq(digest, want), "nist empty")?;
+    assert!(len(digest) == 64, "digest len");
+    assert!(ct_eq(digest, want), "nist empty");
 }

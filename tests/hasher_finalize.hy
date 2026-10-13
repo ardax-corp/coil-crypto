@@ -1,5 +1,6 @@
 // Hasher init(0) + update("abc") + finalize = SHA-256("abc");
 // second finalize is CryptoError::AlreadyFinalized.
+use tests::assert;
 use crypto::{init, update, finalize, Hasher, CryptoError, ct_eq};
 use string::{to_bytes};
 
@@ -57,8 +58,8 @@ test("hasher abc then AlreadyFinalized") {
         Result::Ok(d) => d,
         Result::Err(_) => panic "hasher finalize",
     };
-    assert(len(digest) == 32, "digest len")?;
-    assert(ct_eq(digest, abc_digest()), "sha256 abc")?;
+    assert!(len(digest) == 32, "digest len");
+    assert!(ct_eq(digest, abc_digest()), "sha256 abc");
     match finalize(h) {
         Result::Ok(_) => panic "expected AlreadyFinalized",
         Result::Err(e) => match e {

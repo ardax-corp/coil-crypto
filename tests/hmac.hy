@@ -1,4 +1,5 @@
 // RFC 4231 HMAC-SHA256 / HMAC-SHA512 test case 1; verify ok and bad tag.
+use tests::assert;
 use crypto::{hmac_sha256, hmac_sha512, hmac_verify_sha256, CryptoError, ct_eq};
 use string::{to_bytes};
 
@@ -86,8 +87,8 @@ test("hmac sha256 rfc4231 case 1") {
         Result::Err(_) => panic "hmac_sha256",
     };
     let want = from_hex("b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7");
-    assert(len(tag) == 32, "tag len")?;
-    assert(ct_eq(tag, want), "rfc4231 hmac256")?;
+    assert!(len(tag) == 32, "tag len");
+    assert!(ct_eq(tag, want), "rfc4231 hmac256");
 }
 
 test("hmac sha512 rfc4231 case 1") {
@@ -98,8 +99,8 @@ test("hmac sha512 rfc4231 case 1") {
         Result::Err(_) => panic "hmac_sha512",
     };
     let want = from_hex("87aa7cdea5ef619d4ff0b4241a1d6cb02379f4e2ce4ec2787ad0b30545e17cdedaa833b7d6b8a702038b274eaea3f4e4be9d914eeb61f1702e696c203a126854");
-    assert(len(tag) == 64, "tag len")?;
-    assert(ct_eq(tag, want), "rfc4231 hmac512")?;
+    assert!(len(tag) == 64, "tag len");
+    assert!(ct_eq(tag, want), "rfc4231 hmac512");
 }
 
 test("hmac verify sha256 ok and bad tag") {
@@ -107,7 +108,9 @@ test("hmac verify sha256 ok and bad tag") {
     let data = to_bytes("Hi There");
     let tag = from_hex("b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7");
     match hmac_verify_sha256(key, data, tag) {
-        Result::Ok(b) => assert(b, "verify ok")?,
+        Result::Ok(b) => {
+            assert!(b, "verify ok");
+        },
         Result::Err(_) => panic "verify failed",
     };
     let bad = xor_last(tag);

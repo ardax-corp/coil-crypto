@@ -1,4 +1,5 @@
 // NIST SHA-256 KAT: empty string (same bytes as native/src/lib.rs).
+use tests::assert;
 use crypto::{sha256, ct_eq, CryptoError};
 use string::{to_bytes};
 
@@ -44,6 +45,6 @@ test("sha256 empty string NIST") {
         Result::Ok(d) => d,
         Result::Err(_) => panic "sha256 empty",
     };
-    assert(len(digest) == 32, "digest len")?;
-    assert(ct_eq(digest, empty_digest()), "nist empty")?;
+    assert!(len(digest) == 32, "digest len");
+    assert!(ct_eq(digest, empty_digest()), "nist empty");
 }
