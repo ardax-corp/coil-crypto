@@ -89,7 +89,7 @@ fn err_from(int tag) -> CryptoError {
 }
 
 fn copy_in(Vec<byte> data) -> ptr {
-    let n = len(data);
+    let n = data.len();
     let p = coil_crypto_alloc(n);
     for i in 0..n {
         let idx: int = i;
@@ -125,7 +125,7 @@ fn finish_digest(ptr src, int src_n, ptr out, int cap, int rc) -> Result<Vec<byt
 }
 
 fn sha256(Vec<byte> data) -> Result<Vec<byte>, CryptoError> {
-    let n = len(data);
+    let n = data.len();
     let src = copy_in(data);
     let out = coil_crypto_alloc(32);
     let rc = coil_crypto_sha256(src, n, out, 32, err_ptr());
@@ -133,7 +133,7 @@ fn sha256(Vec<byte> data) -> Result<Vec<byte>, CryptoError> {
 }
 
 fn sha512(Vec<byte> data) -> Result<Vec<byte>, CryptoError> {
-    let n = len(data);
+    let n = data.len();
     let src = copy_in(data);
     let out = coil_crypto_alloc(64);
     let rc = coil_crypto_sha512(src, n, out, 64, err_ptr());
@@ -141,7 +141,7 @@ fn sha512(Vec<byte> data) -> Result<Vec<byte>, CryptoError> {
 }
 
 fn blake3(Vec<byte> data) -> Result<Vec<byte>, CryptoError> {
-    let n = len(data);
+    let n = data.len();
     let src = copy_in(data);
     let out = coil_crypto_alloc(32);
     let rc = coil_crypto_blake3(src, n, out, 32, err_ptr());
@@ -165,7 +165,7 @@ impl Hasher {
     }
 
     pub fn update(Vec<byte> data) -> Result<(), CryptoError> {
-        let n = len(data);
+        let n = data.len();
         let src = copy_in(data);
         let rc = coil_crypto_hasher_update(self.handle, src, n, err_ptr());
         coil_crypto_free(src, n);
@@ -200,8 +200,8 @@ fn finalize(Hasher h) -> Result<Vec<byte>, CryptoError> {
 }
 
 fn hmac_sha256(Vec<byte> key, Vec<byte> data) -> Result<Vec<byte>, CryptoError> {
-    let kn = len(key);
-    let dn = len(data);
+    let kn = key.len();
+    let dn = data.len();
     let k = copy_in(key);
     let d = copy_in(data);
     let out = coil_crypto_alloc(32);
@@ -221,8 +221,8 @@ fn hmac_sha256(Vec<byte> key, Vec<byte> data) -> Result<Vec<byte>, CryptoError> 
 }
 
 fn hmac_sha512(Vec<byte> key, Vec<byte> data) -> Result<Vec<byte>, CryptoError> {
-    let kn = len(key);
-    let dn = len(data);
+    let kn = key.len();
+    let dn = data.len();
     let k = copy_in(key);
     let d = copy_in(data);
     let out = coil_crypto_alloc(64);
@@ -242,9 +242,9 @@ fn hmac_sha512(Vec<byte> key, Vec<byte> data) -> Result<Vec<byte>, CryptoError> 
 }
 
 fn hmac_verify_sha256(Vec<byte> key, Vec<byte> data, Vec<byte> tag) -> Result<bool, CryptoError> {
-    let kn = len(key);
-    let dn = len(data);
-    let tn = len(tag);
+    let kn = key.len();
+    let dn = data.len();
+    let tn = tag.len();
     let k = copy_in(key);
     let d = copy_in(data);
     let t = copy_in(tag);
@@ -299,10 +299,10 @@ fn aead_run(ptr key, int kn, ptr nonce, int nn, ptr msg, int mn, ptr aad, int an
 }
 
 fn chacha20_poly1305_encrypt(Vec<byte> key, Vec<byte> nonce, Vec<byte> plaintext, Vec<byte> aad) -> Result<Vec<byte>, CryptoError> {
-    let kn = len(key);
-    let nn = len(nonce);
-    let mn = len(plaintext);
-    let an = len(aad);
+    let kn = key.len();
+    let nn = nonce.len();
+    let mn = plaintext.len();
+    let an = aad.len();
     let k = copy_in(key);
     let n = copy_in(nonce);
     let m = copy_in(plaintext);
@@ -314,10 +314,10 @@ fn chacha20_poly1305_encrypt(Vec<byte> key, Vec<byte> nonce, Vec<byte> plaintext
 }
 
 fn chacha20_poly1305_decrypt(Vec<byte> key, Vec<byte> nonce, Vec<byte> ciphertext, Vec<byte> aad) -> Result<Vec<byte>, CryptoError> {
-    let kn = len(key);
-    let nn = len(nonce);
-    let mn = len(ciphertext);
-    let an = len(aad);
+    let kn = key.len();
+    let nn = nonce.len();
+    let mn = ciphertext.len();
+    let an = aad.len();
     let k = copy_in(key);
     let n = copy_in(nonce);
     let m = copy_in(ciphertext);
@@ -329,10 +329,10 @@ fn chacha20_poly1305_decrypt(Vec<byte> key, Vec<byte> nonce, Vec<byte> ciphertex
 }
 
 fn aes_256_gcm_encrypt(Vec<byte> key, Vec<byte> nonce, Vec<byte> plaintext, Vec<byte> aad) -> Result<Vec<byte>, CryptoError> {
-    let kn = len(key);
-    let nn = len(nonce);
-    let mn = len(plaintext);
-    let an = len(aad);
+    let kn = key.len();
+    let nn = nonce.len();
+    let mn = plaintext.len();
+    let an = aad.len();
     let k = copy_in(key);
     let n = copy_in(nonce);
     let m = copy_in(plaintext);
@@ -344,10 +344,10 @@ fn aes_256_gcm_encrypt(Vec<byte> key, Vec<byte> nonce, Vec<byte> plaintext, Vec<
 }
 
 fn aes_256_gcm_decrypt(Vec<byte> key, Vec<byte> nonce, Vec<byte> ciphertext, Vec<byte> aad) -> Result<Vec<byte>, CryptoError> {
-    let kn = len(key);
-    let nn = len(nonce);
-    let mn = len(ciphertext);
-    let an = len(aad);
+    let kn = key.len();
+    let nn = nonce.len();
+    let mn = ciphertext.len();
+    let an = aad.len();
     let k = copy_in(key);
     let n = copy_in(nonce);
     let m = copy_in(ciphertext);
@@ -377,8 +377,8 @@ fn ed25519_generate() -> Result<(Vec<byte>, Vec<byte>), CryptoError> {
 }
 
 fn ed25519_sign(Vec<byte> secret, Vec<byte> msg) -> Result<Vec<byte>, CryptoError> {
-    let sn = len(secret);
-    let mn = len(msg);
+    let sn = secret.len();
+    let mn = msg.len();
     let s = copy_in(secret);
     let m = copy_in(msg);
     let out = coil_crypto_alloc(64);
@@ -398,9 +398,9 @@ fn ed25519_sign(Vec<byte> secret, Vec<byte> msg) -> Result<Vec<byte>, CryptoErro
 }
 
 fn ed25519_verify(Vec<byte> public_key, Vec<byte> msg, Vec<byte> sig) -> Result<bool, CryptoError> {
-    let pn = len(public_key);
-    let mn = len(msg);
-    let sn = len(sig);
+    let pn = public_key.len();
+    let mn = msg.len();
+    let sn = sig.len();
     let p = copy_in(public_key);
     let m = copy_in(msg);
     let s = copy_in(sig);
@@ -422,8 +422,8 @@ fn x25519_generate() -> Result<(Vec<byte>, Vec<byte>), CryptoError> {
 }
 
 fn x25519_shared_secret(Vec<byte> secret, Vec<byte> public_key) -> Result<Vec<byte>, CryptoError> {
-    let sn = len(secret);
-    let pn = len(public_key);
+    let sn = secret.len();
+    let pn = public_key.len();
     let s = copy_in(secret);
     let p = copy_in(public_key);
     let out = coil_crypto_alloc(32);
@@ -443,8 +443,8 @@ fn x25519_shared_secret(Vec<byte> secret, Vec<byte> public_key) -> Result<Vec<by
 }
 
 fn argon2id_hash(Vec<byte> password, Vec<byte> salt) -> Result<string, CryptoError> {
-    let pn = len(password);
-    let sn = len(salt);
+    let pn = password.len();
+    let sn = salt.len();
     let p = copy_in(password);
     let s = copy_in(salt);
     let cap = 512;
@@ -468,10 +468,10 @@ fn argon2id_hash(Vec<byte> password, Vec<byte> salt) -> Result<string, CryptoErr
 }
 
 fn argon2id_verify(Vec<byte> password, string hash) -> Result<bool, CryptoError> {
-    let pn = len(password);
+    let pn = password.len();
     let p = copy_in(password);
     let hb = to_bytes(hash);
-    let hn = len(hb);
+    let hn = hb.len();
     let h = copy_in(hb);
     let rc = coil_crypto_argon2id_verify(p, pn, h, hn, err_ptr());
     coil_crypto_free(p, pn);
@@ -483,8 +483,8 @@ fn argon2id_verify(Vec<byte> password, string hash) -> Result<bool, CryptoError>
 }
 
 fn ct_eq(Vec<byte> a, Vec<byte> b) -> bool {
-    let an = len(a);
-    let bn = len(b);
+    let an = a.len();
+    let bn = b.len();
     let pa = copy_in(a);
     let pb = copy_in(b);
     let eq = coil_crypto_ct_eq(pa, an, pb, bn);

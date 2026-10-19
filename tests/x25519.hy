@@ -29,7 +29,7 @@ test("x25519 both sides match") {
         Result::Ok(s) => s,
         Result::Err(_) => panic "shared ba",
     };
-    assert!(len(ab) == 32, "shared len");
+    assert!(ab.len() == 32, "shared len");
     assert!(ct_eq(ab, ba), "dh match");
 }
 
