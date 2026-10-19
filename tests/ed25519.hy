@@ -26,7 +26,7 @@ fn xor_byte(byte x) -> byte {
 }
 
 fn xor_last(Vec<byte> sig) -> Vec<byte> {
-    let n = len(sig);
+    let n = sig.len();
     let o: Vec<byte> = Vec::new();
     for i in 0..n {
         if i == n - 1 {
@@ -45,14 +45,14 @@ test("ed25519 generate sign verify and tamper") {
     };
     let sk = kp[0];
     let pk = kp[1];
-    assert!(len(sk) == 32, "sk len");
-    assert!(len(pk) == 32, "pk len");
+    assert!(sk.len() == 32, "sk len");
+    assert!(pk.len() == 32, "pk len");
     let msg = to_bytes("coil-ed25519");
     let sig = match ed25519_sign(sk, msg) {
         Result::Ok(s) => s,
         Result::Err(_) => panic "sign",
     };
-    assert!(len(sig) == 64, "sig len");
+    assert!(sig.len() == 64, "sig len");
     match ed25519_verify(pk, msg, sig) {
         Result::Ok(b) => {
             assert!(b, "verify ok");

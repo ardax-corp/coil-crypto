@@ -32,7 +32,7 @@ fn mix_nibbles(int hi, int lo) -> byte {
 
 fn from_hex(string s) -> Vec<byte> {
     let raw = to_bytes(s);
-    let n = len(raw);
+    let n = raw.len();
     if n % 2 != 0 {
         panic "odd hex";
     }
@@ -66,7 +66,7 @@ test("hasher sha512 abc") {
         Result::Err(_) => panic "hasher finalize",
     };
     let want = from_hex("ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f");
-    assert!(len(digest) == 64, "digest len");
+    assert!(digest.len() == 64, "digest len");
     assert!(ct_eq(digest, want), "sha512 abc");
 }
 
@@ -85,7 +85,7 @@ test("hasher blake3 input_len 3") {
         Result::Err(_) => panic "hasher finalize",
     };
     let want = from_hex("e1be4d7a8ab5560aa4199eea339849ba8e293d55ca0a81006726d184519e647f");
-    assert!(len(digest) == 32, "digest len");
+    assert!(digest.len() == 32, "digest len");
     assert!(ct_eq(digest, want), "blake3 inlen3");
 }
 

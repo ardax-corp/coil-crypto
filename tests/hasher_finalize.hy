@@ -58,7 +58,7 @@ test("hasher abc then AlreadyFinalized") {
         Result::Ok(d) => d,
         Result::Err(_) => panic "hasher finalize",
     };
-    assert!(len(digest) == 32, "digest len");
+    assert!(digest.len() == 32, "digest len");
     assert!(ct_eq(digest, abc_digest()), "sha256 abc");
     match finalize(h) {
         Result::Ok(_) => panic "expected AlreadyFinalized",

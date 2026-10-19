@@ -32,7 +32,7 @@ fn mix_nibbles(int hi, int lo) -> byte {
 
 fn from_hex(string s) -> Vec<byte> {
     let raw = to_bytes(s);
-    let n = len(raw);
+    let n = raw.len();
     if n % 2 != 0 {
         panic "odd hex";
     }
@@ -54,6 +54,6 @@ test("sha512 empty string NIST") {
         Result::Err(_) => panic "sha512 empty",
     };
     let want = from_hex("cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e");
-    assert!(len(digest) == 64, "digest len");
+    assert!(digest.len() == 64, "digest len");
     assert!(ct_eq(digest, want), "nist empty");
 }

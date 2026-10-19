@@ -33,7 +33,7 @@ fn mix_nibbles(int hi, int lo) -> byte {
 
 fn from_hex(string s) -> Vec<byte> {
     let raw = to_bytes(s);
-    let n = len(raw);
+    let n = raw.len();
     if n % 2 != 0 {
         panic "odd hex";
     }
@@ -55,6 +55,6 @@ test("blake3 empty official") {
         Result::Err(_) => panic "blake3 empty",
     };
     let want = from_hex("af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262");
-    assert!(len(digest) == 32, "digest len");
+    assert!(digest.len() == 32, "digest len");
     assert!(ct_eq(digest, want), "official empty");
 }

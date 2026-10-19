@@ -45,6 +45,6 @@ test("sha256 empty string NIST") {
         Result::Ok(d) => d,
         Result::Err(_) => panic "sha256 empty",
     };
-    assert!(len(digest) == 32, "digest len");
+    assert!(digest.len() == 32, "digest len");
     assert!(ct_eq(digest, empty_digest()), "nist empty");
 }

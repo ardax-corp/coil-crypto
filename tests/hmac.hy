@@ -40,7 +40,7 @@ fn mix_nibbles(int hi, int lo) -> byte {
 
 fn from_hex(string s) -> Vec<byte> {
     let raw = to_bytes(s);
-    let n = len(raw);
+    let n = raw.len();
     if n % 2 != 0 {
         panic "odd hex";
     }
@@ -67,7 +67,7 @@ fn fill_byte(int n, byte v) -> Vec<byte> {
 }
 
 fn xor_last(Vec<byte> tag) -> Vec<byte> {
-    let n = len(tag);
+    let n = tag.len();
     let o: Vec<byte> = Vec::new();
     for i in 0..n {
         if i == n - 1 {
@@ -87,7 +87,7 @@ test("hmac sha256 rfc4231 case 1") {
         Result::Err(_) => panic "hmac_sha256",
     };
     let want = from_hex("b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7");
-    assert!(len(tag) == 32, "tag len");
+    assert!(tag.len() == 32, "tag len");
     assert!(ct_eq(tag, want), "rfc4231 hmac256");
 }
 
@@ -99,7 +99,7 @@ test("hmac sha512 rfc4231 case 1") {
         Result::Err(_) => panic "hmac_sha512",
     };
     let want = from_hex("87aa7cdea5ef619d4ff0b4241a1d6cb02379f4e2ce4ec2787ad0b30545e17cdedaa833b7d6b8a702038b274eaea3f4e4be9d914eeb61f1702e696c203a126854");
-    assert!(len(tag) == 64, "tag len");
+    assert!(tag.len() == 64, "tag len");
     assert!(ct_eq(tag, want), "rfc4231 hmac512");
 }
 

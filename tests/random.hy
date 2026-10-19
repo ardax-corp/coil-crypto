@@ -11,8 +11,8 @@ test("random_bytes length and distinct draws") {
         Result::Ok(d) => d,
         Result::Err(_) => panic "random_bytes b",
     };
-    assert!(len(a) == 32, "len a");
-    assert!(len(b) == 32, "len b");
+    assert!(a.len() == 32, "len a");
+    assert!(b.len() == 32, "len b");
     assert!(ct_eq(a, b) == false, "draws should differ");
 }
 
@@ -21,7 +21,7 @@ test("random_bytes empty") {
         Result::Ok(d) => d,
         Result::Err(_) => panic "random_bytes 0",
     };
-    assert!(len(z) == 0, "empty");
+    assert!(z.len() == 0, "empty");
 }
 
 test("random_bytes too large is InvalidInput") {
