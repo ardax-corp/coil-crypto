@@ -14,6 +14,8 @@ Locked design (accepted [COI-214](https://linear.app/ardax/issue/COI-214/accept-
 
 `extern "crypto"` / `dload("crypto")` resolves to `libcrypto.so` in `native/` (`--ffi-search-path ./native`; spool passes it from `[ffi] search_paths`). Hasher state is an opaque pointer in the `.so` (`Object::CryptoHasher` is gone). `Hasher.drop` calls `coil_crypto_hasher_free`.
 
+The wrappers bind every native that takes or fills a buffer with `declare` and pass each `Vec<byte>` (or the Argon2id PHC `string`) as `ffi::types::ConstBytes` for input and `Bytes` for output, so the VM lends the bytes to C instead of copying them through native heap helpers; `libcrypto` exports none. `native/crypto.h` lists the exported C ABI.
+
 ## Build
 
 ```bash
