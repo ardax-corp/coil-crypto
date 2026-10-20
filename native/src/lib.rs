@@ -142,7 +142,8 @@ unsafe fn digest_call(
     }
 }
 
-/// Packed-buffer helper for Coil FFI marshalling (not a CRYPTO_WIRING name).
+/// Null pointer for the `err_out` / `value_out` arguments of the Coil
+/// `extern` calls (not a CRYPTO_WIRING name).
 #[no_mangle]
 pub extern "C" fn coil_crypto_null() -> *mut u8 {
     std::ptr::null_mut()
@@ -161,55 +162,6 @@ pub extern "C" fn coil_crypto_last_i64() -> i64 {
 #[no_mangle]
 pub extern "C" fn coil_crypto_is_null(p: *const u8) -> i64 {
     i64::from(p.is_null())
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn coil_crypto_alloc(n: u64) -> *mut u8 {
-    if n == 0 {
-        return std::ptr::null_mut();
-    }
-    let Ok(len) = usize::try_from(n) else {
-        return std::ptr::null_mut();
-    };
-    let mut v = vec![0_u8; len];
-    let ptr = v.as_mut_ptr();
-    std::mem::forget(v);
-    ptr
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn coil_crypto_free(ptr: *mut u8, n: u64) {
-    if ptr.is_null() || n == 0 {
-        return;
-    }
-    let Ok(len) = usize::try_from(n) else {
-        return;
-    };
-    drop(unsafe { Vec::from_raw_parts(ptr, len, len) });
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn coil_crypto_store_u8(ptr: *mut u8, i: u64, v: i64) {
-    if ptr.is_null() {
-        return;
-    }
-    let Ok(idx) = usize::try_from(i) else {
-        return;
-    };
-    unsafe {
-        *ptr.add(idx) = v as u8;
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn coil_crypto_load_u8(ptr: *const u8, i: u64) -> i64 {
-    if ptr.is_null() {
-        return 0;
-    }
-    let Ok(idx) = usize::try_from(i) else {
-        return 0;
-    };
-    unsafe { *ptr.add(idx) as i64 }
 }
 
 #[no_mangle]
