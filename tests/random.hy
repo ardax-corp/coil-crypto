@@ -41,3 +41,20 @@ test("random_u64 succeeds") {
     };
     assert!(n == n, "u64 bound");
 }
+
+test("random_bytes far past the cap or negative is InvalidInput") {
+    match random_bytes(1 << 40) {
+        Result::Ok(_) => panic "expected InvalidInput",
+        Result::Err(e) => match e {
+            CryptoError::InvalidInput => {},
+            default => panic "wrong error",
+        },
+    };
+    match random_bytes(-1) {
+        Result::Ok(_) => panic "expected InvalidInput",
+        Result::Err(e) => match e {
+            CryptoError::InvalidInput => {},
+            default => panic "wrong error",
+        },
+    };
+}
