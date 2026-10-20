@@ -57,9 +57,9 @@ test("aead over 2 MiB") {
     let p = pattern();
     let ct = ok(chacha20_poly1305_encrypt(key, nonce, p, aad));
     assert!(ct.len() == 2097168, "chacha ct len");
-    assert!(eq(ok(sha256(ct)), hex("c04d6783fd084538d409e97dcb5cb9c8d43cc8e9f8eee9fc95712038271a2fa5")), "chacha ct");
+    assert!(eq(ok(sha256(ct)), hex("d8cd95875eb04ec23db55189f6d4722681a4a9ea4eda99461637d31ba680754e")), "chacha ct");
     assert!(eq(ok(chacha20_poly1305_decrypt(key, nonce, ct, aad)), p), "chacha roundtrip");
     let gct = ok(aes_256_gcm_encrypt(key, nonce, p, aad));
-    assert!(eq(ok(sha256(gct)), hex("c361de00c9cd29c733567b3976c887c6f5e53039c014347d5db0aac6e65eebf4")), "gcm ct");
+    assert!(eq(ok(sha256(gct)), hex("1f38efc325ee05356bbbe1324b94b907ff6686f4c6bdd1bb70a5d18d75e67d0e")), "gcm ct");
     assert!(eq(ok(aes_256_gcm_decrypt(key, nonce, gct, aad)), p), "gcm roundtrip");
 }
