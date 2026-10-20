@@ -56,10 +56,6 @@ uint8_t *coil_crypto_null(void);
 int64_t coil_crypto_last_error(void);
 int64_t coil_crypto_last_i64(void);
 int64_t coil_crypto_is_null(const uint8_t *p);
-uint8_t *coil_crypto_alloc(uint64_t n);
-void coil_crypto_free(uint8_t *ptr, uint64_t n);
-void coil_crypto_store_u8(uint8_t *ptr, uint64_t i, int64_t v);
-int64_t coil_crypto_load_u8(const uint8_t *ptr, uint64_t i);
 
 #ifdef __cplusplus
 }
