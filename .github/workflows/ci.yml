@@ -70,13 +70,84 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # The native library of every target above, once all of CI is green: a
-  # push to main replaces the rolling `edge` pre-release, a v* tag gets a
-  # release of its own. Each archive unpacks `native/libcrypto.*` into a
-  # coil-crypto checkout; SHA256SUMS also lists each library for `--dload-pin`.
+  # macOS and Windows builds of the native library, for the edge / release
+  # assets only: pull requests build and test on Linux alone.
+  native-release:
+    name: native (${{ matrix.id }})
+    if: github.event_name == 'push'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: macos
+            triple: aarch64-apple-darwin
+            os: macos-latest
+          - id: windows-gnu
+            triple: x86_64-pc-windows-gnu
+            os: windows-latest
+            windows: true
+    steps:
+      - uses: actions/checkout@v4
+
+      # MinGW gcc for ring / cc-built C parts (MSVC + MinGW is an ABI mismatch).
+      - name: Install deps (Windows)
+        if: matrix.windows
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            base-devel
+            mingw-w64-x86_64-toolchain
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.windows && 'stable-x86_64-pc-windows-gnu' || 'stable' }}
+
+      - name: Build
+        if: ${{ !matrix.windows }}
+        working-directory: native
+        run: make artifact
+
+      - name: Build (Windows gnu)
+        if: matrix.windows
+        shell: msys2 {0}
+        working-directory: native
+        run: |
+          cargo_bin="$(cygpath -u "${CARGO_HOME:-$USERPROFILE/.cargo}")/bin"
+          export PATH="$MINGW_PREFIX/bin:$cargo_bin:/usr/bin:$PATH"
+          make artifact
+
+      - name: Package native library
+        shell: bash
+        run: |
+          set -euo pipefail
+          lib=""
+          for f in native/libcrypto.dylib native/libcrypto.dll native/crypto.dll; do
+            if [ -f "$f" ]; then lib="$f"; fi
+          done
+          test -n "$lib"
+          mkdir -p dist/pkg/native
+          cp "$lib" dist/pkg/native/
+          tar -C dist/pkg -czf "dist/coil-crypto-native-${{ matrix.triple }}.tar.gz" native
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.triple }}
+          path: dist/*.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  # The native library of every target (Linux from `test`, macOS and
+  # Windows from `native-release`), once all of CI is green: a push to main
+  # replaces the rolling `edge` pre-release, a v* tag gets a release of its
+  # own. Each archive unpacks `native/libcrypto.*` into a coil-crypto
+  # checkout; SHA256SUMS also lists each library for `--dload-pin`.
   publish:
     name: publish (${{ github.ref_type == 'tag' && github.ref_name || 'edge' }})
-    needs: test
+    needs: [test, native-release]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
