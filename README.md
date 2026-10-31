@@ -2,8 +2,6 @@
 
 Userland cryptography for [coil](https://github.com/ardax-corp/coil-lang). RustCrypto lives in a cdylib (`libcrypto.so` / `.dylib` / `.dll`) plus Coil wrappers. `use crypto::{…}` is this package, not a compiler builtin.
 
-Locked design (accepted [COI-214](https://linear.app/ardax/issue/COI-214/accept-coil-crypto-design)): [coil-crypto design (v1)](https://linear.app/ardax/document/coil-crypto-design-v1-f48b4876e457).
-
 It covers hashing (SHA-256, SHA-512, BLAKE3, and an incremental `Hasher`), HMAC-SHA256/512, OS randomness, AEAD (ChaCha20-Poly1305, AES-256-GCM), Ed25519 signatures, X25519 key agreement, Argon2id password hashing and a constant-time compare. Every fallible call returns `Result<_, CryptoError>`.
 
 ## Example
