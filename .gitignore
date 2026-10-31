@@ -2,5 +2,6 @@
 *.so
 *.dylib
 *.dll
+*.ccoil
 *.hyc
 target/

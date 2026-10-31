@@ -27,14 +27,14 @@ fn main() {
 make -C ../coil-crypto   # builds native/libcrypto.so (or .dylib / .dll)
 coil --root ../coil-crypto/src --root ../coil-stdlib/src \
   --ffi-search-path ../coil-crypto/native \
-  --allow-dload crypto --dload-trusted crypto main.hy
+  --allow-dload crypto --dload-trusted crypto main.coil
 ```
 
 ## Layout
 
 | Path | Role |
 |------|------|
-| `src/crypto.hy` | Package exports (`sha256`, `init` / `update` / `finalize`, HMAC, AEAD, Ed25519 / X25519, Argon2id, `ct_eq`) |
+| `src/crypto.coil` | Package exports (`sha256`, `init` / `update` / `finalize`, HMAC, AEAD, Ed25519 / X25519, Argon2id, `ct_eq`) |
 | `native/` | Rust cdylib, C ABI `coil_crypto_*` |
 | `coil.toml` | spool manifest (`[package] name = "crypto"`); coil does not read it |
 

@@ -1,6 +1,6 @@
 # Consuming coil-crypto
 
-This package is `crypto`. `use crypto::{sha256}` resolves from this repo's `src/`. RustCrypto lives in `libcrypto.so` / `.dylib` / `crypto.dll`. `extern "crypto"` in `src/crypto.hy` already calls `dload("crypto")`. Put the built library on the FFI search path (`--ffi-search-path`). The VM does not register crypto HostInvoke slots. `use crypto` without this package's `src/` as a `--root` is a module-not-found error.
+This package is `crypto`. `use crypto::{sha256}` resolves from this repo's `src/`. RustCrypto lives in `libcrypto.so` / `.dylib` / `crypto.dll`. `extern "crypto"` in `src/crypto.coil` already calls `dload("crypto")`. Put the built library on the FFI search path (`--ffi-search-path`). The VM does not register crypto HostInvoke slots. `use crypto` without this package's `src/` as a `--root` is a module-not-found error.
 
 ## Depend on it
 
@@ -33,7 +33,7 @@ Clone this repo next to your project, run `make` there, and pass everything as f
 make -C ../coil-crypto
 coil --root ../coil-crypto/src \
   --ffi-search-path ../coil-crypto/native \
-  --allow-dload crypto --dload-trusted crypto main.hy
+  --allow-dload crypto --dload-trusted crypto main.coil
 ```
 
 Use `--dload-pin crypto=<sha256 of libcrypto.so>` instead of `--dload-trusted crypto` to pin the build. Application code imports the Coil wrappers. It does not call `dload` itself.
@@ -66,7 +66,7 @@ Argon2id MVP params are fixed (19 MiB, 2 iterations, parallelism 1) and not call
 
 `ct_eq` is a `bool`, not a `Result`.
 
-Shipped names in `src/crypto.hy`:
+Shipped names in `src/crypto.coil`:
 
 | Name | Notes |
 |------|--------|
