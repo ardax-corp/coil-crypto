@@ -84,5 +84,3 @@ Shipped names in `src/crypto.hy`:
 | `Hasher` | Opaque native handle. Drop frees it |
 
 Do not call `coil_crypto_*` from application code. Those symbols are the C ABI behind the wrappers.
-
-Design: [coil-crypto design (v1)](https://linear.app/ardax/document/coil-crypto-design-v1-f48b4876e457).

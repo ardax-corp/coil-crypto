@@ -2,7 +2,33 @@
 
 Userland cryptography for [coil](https://github.com/ardax-corp/coil-lang). RustCrypto lives in a cdylib (`libcrypto.so` / `.dylib` / `.dll`) plus Coil wrappers. `use crypto::{…}` is this package, not a compiler builtin.
 
-Locked design (accepted [COI-214](https://linear.app/ardax/issue/COI-214/accept-coil-crypto-design)): [coil-crypto design (v1)](https://linear.app/ardax/document/coil-crypto-design-v1-f48b4876e457).
+It covers hashing (SHA-256, SHA-512, BLAKE3, and an incremental `Hasher`), HMAC-SHA256/512, OS randomness, AEAD (ChaCha20-Poly1305, AES-256-GCM), Ed25519 signatures, X25519 key agreement, Argon2id password hashing and a constant-time compare. Every fallible call returns `Result<_, CryptoError>`.
+
+## Example
+
+```coil
+use crypto::{sha256, hmac_sha256, hmac_verify_sha256, random_bytes};
+use bytes::{to_hex};
+use io::sync::{println};
+use string::{to_bytes};
+
+fn main() {
+    let digest = sha256(to_bytes("hello")).unwrap_or(Vec::new());
+    println("sha256: " + to_hex(digest))?;
+
+    let key = random_bytes(32).unwrap_or(Vec::new());
+    let tag = hmac_sha256(key, to_bytes("message")).unwrap_or(Vec::new());
+    let ok = hmac_verify_sha256(key, to_bytes("message"), tag).is_ok();
+    println("tag verifies: " + ok.show())?;
+}
+```
+
+```bash
+make -C ../coil-crypto   # builds native/libcrypto.so (or .dylib / .dll)
+coil --root ../coil-crypto/src --root ../coil-stdlib/src \
+  --ffi-search-path ../coil-crypto/native \
+  --allow-dload crypto --dload-trusted crypto main.hy
+```
 
 ## Layout
 
