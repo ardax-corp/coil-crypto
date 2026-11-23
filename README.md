@@ -40,7 +40,7 @@ coil --root ../coil-crypto/src --root ../coil-stdlib/src \
 
 `extern "crypto"` / `dload("crypto")` resolves to `libcrypto.so` in `native/` (`--ffi-search-path ./native`; spool passes it from `[ffi] search_paths`). Hasher state is an opaque pointer in the `.so` (`Object::CryptoHasher` is gone). `Hasher.drop` calls `coil_crypto_hasher_free`.
 
-The wrappers bind every native that takes or fills a buffer with `declare` and pass each `Vec<byte>` (or the Argon2id PHC `string`) as `ffi::types::ConstBytes` for input and `Bytes` for output, so the VM lends the bytes to C instead of copying them through native heap helpers; `libcrypto` exports none. `native/crypto.h` lists the exported C ABI.
+Every native is declared in one `extern "crypto"` block. Buffer parameters are `ffi::types::ConstBytes` for input and `Bytes` for output, so each `Vec<byte>` (or the Argon2id PHC `string`) is lent to C in place instead of copied through native heap helpers; `libcrypto` exports none (CI checks with `nm`). The calls are direct C calls in native code; an AOT `coil package` links `libcrypto.so` by name on Linux. `native/crypto.h` lists the exported C ABI.
 
 ## Build
 

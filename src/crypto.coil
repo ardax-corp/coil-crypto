@@ -2,22 +2,17 @@
 // OS randomness, AEAD (ChaCha20-Poly1305, AES-256-GCM), Ed25519 signatures,
 // X25519 key agreement, Argon2id password hashing and constant-time compare.
 //
-// Userland crypto — FFI to native/libcrypto.{so,dylib,dll} (dload("crypto")).
+// Userland crypto: an `extern "crypto"` block over native/libcrypto.{so,dylib,dll}.
 // Surface names match CRYPTO_WIRING. Hasher state lives in the .so.
 //
-// Bytes cross the FFI directly: every native that reads or writes a buffer
-// is bound with `declare`, inputs as `ConstBytes` and output buffers as
-// `Bytes`, so the VM lends each `Vec<byte>` (or copies it once) instead of
-// coil code copying it one byte at a time. `extern` blocks cannot take those
-// tags, which is why these go through `declare` / `invoke`; the natives with
-// no buffer stay in the `extern` block.
+// Bytes cross the FFI directly: buffer parameters are `ConstBytes` (input)
+// and `Bytes` (output) in the `extern` block, so each `Vec<byte>` is lent
+// in place instead of copied one byte at a time.
 //
-// err_out is never a Coil array: pass a null pointer (`err_ptr()` in the
-// extern block, `0` through `invoke`) and read coil_crypto_last_error()
-// after a failing call.
+// err_out is never a Coil array: pass a null pointer (`err_ptr()`) and read
+// coil_crypto_last_error() after a failing call.
 
-use ffi::{dload, declare, invoke, Error};
-use ffi::types::{Bytes, ConstBytes, Int, Void};
+use ffi::types::{Bytes, ConstBytes};
 use string::{from_bytes, slice_bytes, to_bytes};
 
 extern "crypto" {
@@ -27,6 +22,28 @@ extern "crypto" {
     fn coil_crypto_is_null(ptr p) -> int;
     fn coil_crypto_hasher_init(int alg, ptr err_out) -> ptr;
     fn coil_crypto_random_u64(ptr value_out, ptr err_out) -> int;
+    fn coil_crypto_sha256(ConstBytes data, int len, Bytes out, int cap, ptr err_out) -> int;
+    fn coil_crypto_sha512(ConstBytes data, int len, Bytes out, int cap, ptr err_out) -> int;
+    fn coil_crypto_blake3(ConstBytes data, int len, Bytes out, int cap, ptr err_out) -> int;
+    fn coil_crypto_hasher_update(ptr h, ConstBytes data, int len, ptr err_out) -> int;
+    fn coil_crypto_hasher_finalize(ptr h, Bytes out, int cap, ptr err_out) -> int;
+    fn coil_crypto_hasher_free(ptr h);
+    fn coil_crypto_hmac_sha256(ConstBytes key, int key_len, ConstBytes data, int data_len, Bytes out, int cap, ptr err_out) -> int;
+    fn coil_crypto_hmac_sha512(ConstBytes key, int key_len, ConstBytes data, int data_len, Bytes out, int cap, ptr err_out) -> int;
+    fn coil_crypto_hmac_verify_sha256(ConstBytes key, int key_len, ConstBytes data, int data_len, ConstBytes tag, int tag_len, ptr err_out) -> int;
+    fn coil_crypto_random_bytes(int n, Bytes out, int cap, ptr err_out) -> int;
+    fn coil_crypto_chacha20_poly1305_encrypt(ConstBytes key, int key_len, ConstBytes nonce, int nonce_len, ConstBytes msg, int msg_len, ConstBytes aad, int aad_len, Bytes out, int cap, ptr err_out) -> int;
+    fn coil_crypto_chacha20_poly1305_decrypt(ConstBytes key, int key_len, ConstBytes nonce, int nonce_len, ConstBytes msg, int msg_len, ConstBytes aad, int aad_len, Bytes out, int cap, ptr err_out) -> int;
+    fn coil_crypto_aes_256_gcm_encrypt(ConstBytes key, int key_len, ConstBytes nonce, int nonce_len, ConstBytes msg, int msg_len, ConstBytes aad, int aad_len, Bytes out, int cap, ptr err_out) -> int;
+    fn coil_crypto_aes_256_gcm_decrypt(ConstBytes key, int key_len, ConstBytes nonce, int nonce_len, ConstBytes msg, int msg_len, ConstBytes aad, int aad_len, Bytes out, int cap, ptr err_out) -> int;
+    fn coil_crypto_ed25519_generate(Bytes secret_out, Bytes public_out, ptr err_out) -> int;
+    fn coil_crypto_ed25519_sign(ConstBytes secret, int secret_len, ConstBytes msg, int msg_len, Bytes out, int cap, ptr err_out) -> int;
+    fn coil_crypto_ed25519_verify(ConstBytes public_key, int public_len, ConstBytes msg, int msg_len, ConstBytes sig, int sig_len, ptr err_out) -> int;
+    fn coil_crypto_x25519_generate(Bytes secret_out, Bytes public_out, ptr err_out) -> int;
+    fn coil_crypto_x25519_shared_secret(ConstBytes secret, int secret_len, ConstBytes public_key, int public_len, Bytes out, int cap, ptr err_out) -> int;
+    fn coil_crypto_argon2id_hash(ConstBytes password, int password_len, ConstBytes salt, int salt_len, Bytes out, int cap, ptr err_out) -> int;
+    fn coil_crypto_argon2id_verify(ConstBytes password, int password_len, ConstBytes hash, int hash_len, ptr err_out) -> int;
+    fn coil_crypto_ct_eq(ConstBytes a, int a_len, ConstBytes b, int b_len) -> int;
 }
 
 /// Why a crypto call failed.
@@ -98,73 +115,6 @@ class Hasher {
     live: bool,
 }
 
-// One dload per process. `invoke` takes its function id from a local, so
-// each wrapper calls `native()` first and then copies its id out of these.
-static let native_lib = 0;
-static let fn_sha256 = 0;
-static let fn_sha512 = 0;
-static let fn_blake3 = 0;
-static let fn_hasher_update = 0;
-static let fn_hasher_finalize = 0;
-static let fn_hasher_free = 0;
-static let fn_hmac_sha256 = 0;
-static let fn_hmac_sha512 = 0;
-static let fn_hmac_verify_sha256 = 0;
-static let fn_random_bytes = 0;
-static let fn_chacha20_poly1305_encrypt = 0;
-static let fn_chacha20_poly1305_decrypt = 0;
-static let fn_aes_256_gcm_encrypt = 0;
-static let fn_aes_256_gcm_decrypt = 0;
-static let fn_ed25519_generate = 0;
-static let fn_ed25519_sign = 0;
-static let fn_ed25519_verify = 0;
-static let fn_x25519_generate = 0;
-static let fn_x25519_shared_secret = 0;
-static let fn_argon2id_hash = 0;
-static let fn_argon2id_verify = 0;
-static let fn_ct_eq = 0;
-
-// A missing library or symbol is a build mismatch, as it is for the
-// `extern` block, so it panics.
-fn bound(Result<int, Error> r) -> int {
-    return match r {
-        Result::Ok(id) => id,
-        Result::Err(e) => panic e.message,
-    };
-}
-
-// The library handle, declaring every buffer native on first use.
-fn native() -> int {
-    if native_lib != 0 {
-        return native_lib;
-    }
-    let lib = bound(dload("crypto"));
-    fn_sha256 = bound(declare(lib, "coil_crypto_sha256", (ConstBytes, Int, Bytes, Int, Int), Int));
-    fn_sha512 = bound(declare(lib, "coil_crypto_sha512", (ConstBytes, Int, Bytes, Int, Int), Int));
-    fn_blake3 = bound(declare(lib, "coil_crypto_blake3", (ConstBytes, Int, Bytes, Int, Int), Int));
-    fn_hasher_update = bound(declare(lib, "coil_crypto_hasher_update", (Int, ConstBytes, Int, Int), Int));
-    fn_hasher_finalize = bound(declare(lib, "coil_crypto_hasher_finalize", (Int, Bytes, Int, Int), Int));
-    fn_hasher_free = bound(declare(lib, "coil_crypto_hasher_free", (Int,), Void));
-    fn_hmac_sha256 = bound(declare(lib, "coil_crypto_hmac_sha256", (ConstBytes, Int, ConstBytes, Int, Bytes, Int, Int), Int));
-    fn_hmac_sha512 = bound(declare(lib, "coil_crypto_hmac_sha512", (ConstBytes, Int, ConstBytes, Int, Bytes, Int, Int), Int));
-    fn_hmac_verify_sha256 = bound(declare(lib, "coil_crypto_hmac_verify_sha256", (ConstBytes, Int, ConstBytes, Int, ConstBytes, Int, Int), Int));
-    fn_random_bytes = bound(declare(lib, "coil_crypto_random_bytes", (Int, Bytes, Int, Int), Int));
-    fn_chacha20_poly1305_encrypt = bound(declare(lib, "coil_crypto_chacha20_poly1305_encrypt", (ConstBytes, Int, ConstBytes, Int, ConstBytes, Int, ConstBytes, Int, Bytes, Int, Int), Int));
-    fn_chacha20_poly1305_decrypt = bound(declare(lib, "coil_crypto_chacha20_poly1305_decrypt", (ConstBytes, Int, ConstBytes, Int, ConstBytes, Int, ConstBytes, Int, Bytes, Int, Int), Int));
-    fn_aes_256_gcm_encrypt = bound(declare(lib, "coil_crypto_aes_256_gcm_encrypt", (ConstBytes, Int, ConstBytes, Int, ConstBytes, Int, ConstBytes, Int, Bytes, Int, Int), Int));
-    fn_aes_256_gcm_decrypt = bound(declare(lib, "coil_crypto_aes_256_gcm_decrypt", (ConstBytes, Int, ConstBytes, Int, ConstBytes, Int, ConstBytes, Int, Bytes, Int, Int), Int));
-    fn_ed25519_generate = bound(declare(lib, "coil_crypto_ed25519_generate", (Bytes, Bytes, Int), Int));
-    fn_ed25519_sign = bound(declare(lib, "coil_crypto_ed25519_sign", (ConstBytes, Int, ConstBytes, Int, Bytes, Int, Int), Int));
-    fn_ed25519_verify = bound(declare(lib, "coil_crypto_ed25519_verify", (ConstBytes, Int, ConstBytes, Int, ConstBytes, Int, Int), Int));
-    fn_x25519_generate = bound(declare(lib, "coil_crypto_x25519_generate", (Bytes, Bytes, Int), Int));
-    fn_x25519_shared_secret = bound(declare(lib, "coil_crypto_x25519_shared_secret", (ConstBytes, Int, ConstBytes, Int, Bytes, Int, Int), Int));
-    fn_argon2id_hash = bound(declare(lib, "coil_crypto_argon2id_hash", (ConstBytes, Int, ConstBytes, Int, Bytes, Int, Int), Int));
-    fn_argon2id_verify = bound(declare(lib, "coil_crypto_argon2id_verify", (ConstBytes, Int, ConstBytes, Int, Int), Int));
-    fn_ct_eq = bound(declare(lib, "coil_crypto_ct_eq", (ConstBytes, Int, ConstBytes, Int), Int));
-    native_lib = lib;
-    return lib;
-}
-
 fn err_ptr() -> ptr {
     return coil_crypto_null();
 }
@@ -189,12 +139,7 @@ fn err_from(int tag) -> CryptoError {
 }
 
 // A native's return code: the byte count (or 0), or the native's error.
-// An FFI failure of the call itself (never expected) is `Other`.
-fn checked(Result<int, Error> r) -> Result<int, CryptoError> {
-    let rc = match r {
-        Result::Ok(v) => v,
-        Result::Err(_) => raise CryptoError::Other,
-    };
+fn checked(int rc) -> Result<int, CryptoError> {
     if rc < 0 {
         raise err_from(coil_crypto_last_error());
     }
@@ -229,14 +174,6 @@ fn fit(Vec<byte> out, int n) -> Vec<byte> {
     return out;
 }
 
-fn digest_with(int which, Vec<byte> data, int size) -> Result<Vec<byte>, CryptoError> {
-    let lib = native();
-    let f = which;
-    let out = buffer(size);
-    let w = checked(invoke(lib, f, (data, data.len(), out, size, 0)))?;
-    return fit(out, w);
-}
-
 /// Returns the 32-byte SHA-256 digest of `data`.
 ///
 /// # Examples
@@ -250,8 +187,9 @@ fn digest_with(int which, Vec<byte> data, int size) -> Result<Vec<byte>, CryptoE
 /// assert!(to_hex(digest) == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
 /// ```
 fn sha256(Vec<byte> data) -> Result<Vec<byte>, CryptoError> {
-    native();
-    return digest_with(fn_sha256, data, 32)?;
+    let out = buffer(32);
+    let w = checked(coil_crypto_sha256(data, data.len(), out, 32, err_ptr()))?;
+    return fit(out, w);
 }
 
 /// Returns the 64-byte SHA-512 digest of `data`.
@@ -266,8 +204,9 @@ fn sha256(Vec<byte> data) -> Result<Vec<byte>, CryptoError> {
 /// assert!(digest.len() == 64);
 /// ```
 fn sha512(Vec<byte> data) -> Result<Vec<byte>, CryptoError> {
-    native();
-    return digest_with(fn_sha512, data, 64)?;
+    let out = buffer(64);
+    let w = checked(coil_crypto_sha512(data, data.len(), out, 64, err_ptr()))?;
+    return fit(out, w);
 }
 
 /// Returns the 32-byte BLAKE3 digest of `data`.
@@ -283,8 +222,9 @@ fn sha512(Vec<byte> data) -> Result<Vec<byte>, CryptoError> {
 /// assert!(to_hex(digest) == "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262");
 /// ```
 fn blake3(Vec<byte> data) -> Result<Vec<byte>, CryptoError> {
-    native();
-    return digest_with(fn_blake3, data, 32)?;
+    let out = buffer(32);
+    let w = checked(coil_crypto_blake3(data, data.len(), out, 32, err_ptr()))?;
+    return fit(out, w);
 }
 
 /// Starts an incremental `Hasher` for algorithm `alg`.
@@ -320,12 +260,7 @@ fn init(int alg) -> Result<Hasher, CryptoError> {
 impl Hasher {
     fn drop() {
         if self.live {
-            let lib = native();
-            let f = fn_hasher_free;
-            match invoke(lib, f, (self.handle,)) {
-                Result::Ok(_) => {},
-                Result::Err(_) => {},
-            };
+            coil_crypto_hasher_free(self.handle);
             self.live = false;
         }
     }
@@ -336,9 +271,7 @@ impl Hasher {
     ///
     /// Returns `CryptoError::AlreadyFinalized` after `finalize`.
     pub fn update(Vec<byte> data) -> Result<(), CryptoError> {
-        let lib = native();
-        let f = fn_hasher_update;
-        checked(invoke(lib, f, (self.handle, data, data.len(), 0)))?;
+        checked(coil_crypto_hasher_update(self.handle, data, data.len(), err_ptr()))?;
         return ();
     }
 
@@ -351,10 +284,8 @@ impl Hasher {
     ///
     /// Returns `CryptoError::AlreadyFinalized` when called a second time.
     pub fn finalize() -> Result<Vec<byte>, CryptoError> {
-        let lib = native();
-        let f = fn_hasher_finalize;
         let out = buffer(64);
-        let w = checked(invoke(lib, f, (self.handle, out, 64, 0)))?;
+        let w = checked(coil_crypto_hasher_finalize(self.handle, out, 64, err_ptr()))?;
         return fit(out, w);
     }
 }
@@ -377,14 +308,6 @@ fn finalize(Hasher h) -> Result<Vec<byte>, CryptoError> {
     return h.finalize()?;
 }
 
-fn pair_with(int which, Vec<byte> a, Vec<byte> b, int size) -> Result<Vec<byte>, CryptoError> {
-    let lib = native();
-    let f = which;
-    let out = buffer(size);
-    let w = checked(invoke(lib, f, (a, a.len(), b, b.len(), out, size, 0)))?;
-    return fit(out, w);
-}
-
 /// Returns the 32-byte HMAC-SHA256 tag of `data` under `key`.
 ///
 /// `key` may be any length, including empty.
@@ -402,8 +325,9 @@ fn pair_with(int which, Vec<byte> a, Vec<byte> b, int size) -> Result<Vec<byte>,
 /// assert!(hmac_verify_sha256(key, to_bytes("tampered"), tag).is_err());
 /// ```
 fn hmac_sha256(Vec<byte> key, Vec<byte> data) -> Result<Vec<byte>, CryptoError> {
-    native();
-    return pair_with(fn_hmac_sha256, key, data, 32)?;
+    let out = buffer(32);
+    let w = checked(coil_crypto_hmac_sha256(key, key.len(), data, data.len(), out, 32, err_ptr()))?;
+    return fit(out, w);
 }
 
 /// Returns the 64-byte HMAC-SHA512 tag of `data` under `key`.
@@ -420,8 +344,9 @@ fn hmac_sha256(Vec<byte> key, Vec<byte> data) -> Result<Vec<byte>, CryptoError> 
 /// assert!(tag.len() == 64);
 /// ```
 fn hmac_sha512(Vec<byte> key, Vec<byte> data) -> Result<Vec<byte>, CryptoError> {
-    native();
-    return pair_with(fn_hmac_sha512, key, data, 64)?;
+    let out = buffer(64);
+    let w = checked(coil_crypto_hmac_sha512(key, key.len(), data, data.len(), out, 64, err_ptr()))?;
+    return fit(out, w);
 }
 
 /// Checks in constant time that `tag` is the HMAC-SHA256 of `data` under `key`.
@@ -433,9 +358,7 @@ fn hmac_sha512(Vec<byte> key, Vec<byte> data) -> Result<Vec<byte>, CryptoError> 
 /// Returns `CryptoError::AuthenticationFailed` when the tag does not match
 /// (including a tag of the wrong length).
 fn hmac_verify_sha256(Vec<byte> key, Vec<byte> data, Vec<byte> tag) -> Result<bool, CryptoError> {
-    let lib = native();
-    let f = fn_hmac_verify_sha256;
-    checked(invoke(lib, f, (key, key.len(), data, data.len(), tag, tag.len(), 0)))?;
+    checked(coil_crypto_hmac_verify_sha256(key, key.len(), data, data.len(), tag, tag.len(), err_ptr()))?;
     return true;
 }
 
@@ -459,8 +382,6 @@ fn hmac_verify_sha256(Vec<byte> key, Vec<byte> data, Vec<byte> tag) -> Result<bo
 /// assert!(random_bytes(2000000).is_err());
 /// ```
 fn random_bytes(int n) -> Result<Vec<byte>, CryptoError> {
-    let lib = native();
-    let f = fn_random_bytes;
     // Past the native's 1 MiB cap (or below 0, which it reads as a huge
     // u64) it fails with InvalidInput before touching `out`, so do not
     // allocate `n` bytes for it.
@@ -469,7 +390,7 @@ fn random_bytes(int n) -> Result<Vec<byte>, CryptoError> {
         cap = 0;
     }
     let out = buffer(cap);
-    let w = checked(invoke(lib, f, (n, out, cap, 0)))?;
+    let w = checked(coil_crypto_random_bytes(n, out, cap, err_ptr()))?;
     return fit(out, w);
 }
 
@@ -497,15 +418,6 @@ fn random_u64() -> Result<int, CryptoError> {
         raise err_from(coil_crypto_last_error());
     }
     return coil_crypto_last_i64();
-}
-
-// Seal (`cap` = message + 16) or open (`cap` = message) with one AEAD native.
-fn aead_with(int which, Vec<byte> key, Vec<byte> nonce, Vec<byte> msg, Vec<byte> aad, int cap) -> Result<Vec<byte>, CryptoError> {
-    let lib = native();
-    let f = which;
-    let out = buffer(cap);
-    let w = checked(invoke(lib, f, (key, key.len(), nonce, nonce.len(), msg, msg.len(), aad, aad.len(), out, cap, 0)))?;
-    return fit(out, w);
 }
 
 /// Encrypts and authenticates `plaintext` with ChaCha20-Poly1305.
@@ -537,8 +449,10 @@ fn aead_with(int which, Vec<byte> key, Vec<byte> nonce, Vec<byte> msg, Vec<byte>
 /// assert!(chacha20_poly1305_decrypt(key, nonce, sealed, to_bytes("other")).is_err());
 /// ```
 fn chacha20_poly1305_encrypt(Vec<byte> key, Vec<byte> nonce, Vec<byte> plaintext, Vec<byte> aad) -> Result<Vec<byte>, CryptoError> {
-    native();
-    return aead_with(fn_chacha20_poly1305_encrypt, key, nonce, plaintext, aad, plaintext.len() + 16)?;
+    let cap = plaintext.len() + 16;
+    let out = buffer(cap);
+    let w = checked(coil_crypto_chacha20_poly1305_encrypt(key, key.len(), nonce, nonce.len(), plaintext, plaintext.len(), aad, aad.len(), out, cap, err_ptr()))?;
+    return fit(out, w);
 }
 
 /// Verifies and decrypts `ciphertext` (ciphertext plus 16-byte tag) sealed by
@@ -550,8 +464,10 @@ fn chacha20_poly1305_encrypt(Vec<byte> key, Vec<byte> nonce, Vec<byte> plaintext
 /// and `CryptoError::AuthenticationFailed` when the ciphertext, tag or `aad`
 /// was altered, or the key or nonce differ.
 fn chacha20_poly1305_decrypt(Vec<byte> key, Vec<byte> nonce, Vec<byte> ciphertext, Vec<byte> aad) -> Result<Vec<byte>, CryptoError> {
-    native();
-    return aead_with(fn_chacha20_poly1305_decrypt, key, nonce, ciphertext, aad, ciphertext.len())?;
+    let cap = ciphertext.len();
+    let out = buffer(cap);
+    let w = checked(coil_crypto_chacha20_poly1305_decrypt(key, key.len(), nonce, nonce.len(), ciphertext, ciphertext.len(), aad, aad.len(), out, cap, err_ptr()))?;
+    return fit(out, w);
 }
 
 /// Encrypts and authenticates `plaintext` with AES-256-GCM.
@@ -579,8 +495,10 @@ fn chacha20_poly1305_decrypt(Vec<byte> key, Vec<byte> nonce, Vec<byte> ciphertex
 /// assert!(aes_256_gcm_decrypt(key, nonce, sealed, empty).unwrap_or(Vec::new()) == to_bytes("hi"));
 /// ```
 fn aes_256_gcm_encrypt(Vec<byte> key, Vec<byte> nonce, Vec<byte> plaintext, Vec<byte> aad) -> Result<Vec<byte>, CryptoError> {
-    native();
-    return aead_with(fn_aes_256_gcm_encrypt, key, nonce, plaintext, aad, plaintext.len() + 16)?;
+    let cap = plaintext.len() + 16;
+    let out = buffer(cap);
+    let w = checked(coil_crypto_aes_256_gcm_encrypt(key, key.len(), nonce, nonce.len(), plaintext, plaintext.len(), aad, aad.len(), out, cap, err_ptr()))?;
+    return fit(out, w);
 }
 
 /// Verifies and decrypts `ciphertext` (ciphertext plus 16-byte tag) sealed by
@@ -592,17 +510,10 @@ fn aes_256_gcm_encrypt(Vec<byte> key, Vec<byte> nonce, Vec<byte> plaintext, Vec<
 /// and `CryptoError::AuthenticationFailed` when the ciphertext, tag or `aad`
 /// was altered, or the key or nonce differ.
 fn aes_256_gcm_decrypt(Vec<byte> key, Vec<byte> nonce, Vec<byte> ciphertext, Vec<byte> aad) -> Result<Vec<byte>, CryptoError> {
-    native();
-    return aead_with(fn_aes_256_gcm_decrypt, key, nonce, ciphertext, aad, ciphertext.len())?;
-}
-
-fn keypair_with(int which) -> Result<(Vec<byte>, Vec<byte>), CryptoError> {
-    let lib = native();
-    let f = which;
-    let secret = buffer(32);
-    let public = buffer(32);
-    checked(invoke(lib, f, (secret, public, 0)))?;
-    return (secret, public);
+    let cap = ciphertext.len();
+    let out = buffer(cap);
+    let w = checked(coil_crypto_aes_256_gcm_decrypt(key, key.len(), nonce, nonce.len(), ciphertext, ciphertext.len(), aad, aad.len(), out, cap, err_ptr()))?;
+    return fit(out, w);
 }
 
 /// Generates a fresh Ed25519 signing key pair as `(secret, public)`, 32 bytes each.
@@ -630,8 +541,10 @@ fn keypair_with(int which) -> Result<(Vec<byte>, Vec<byte>), CryptoError> {
 /// assert!(ed25519_verify(public, to_bytes("release v2"), sig).is_err());
 /// ```
 fn ed25519_generate() -> Result<(Vec<byte>, Vec<byte>), CryptoError> {
-    native();
-    return keypair_with(fn_ed25519_generate)?;
+    let secret = buffer(32);
+    let public = buffer(32);
+    checked(coil_crypto_ed25519_generate(secret, public, err_ptr()))?;
+    return (secret, public);
 }
 
 /// Signs `msg` with the 32-byte Ed25519 `secret` key and returns the
@@ -643,8 +556,9 @@ fn ed25519_generate() -> Result<(Vec<byte>, Vec<byte>), CryptoError> {
 ///
 /// Returns `CryptoError::InvalidLength` when `secret` is not 32 bytes.
 fn ed25519_sign(Vec<byte> secret, Vec<byte> msg) -> Result<Vec<byte>, CryptoError> {
-    native();
-    return pair_with(fn_ed25519_sign, secret, msg, 64)?;
+    let out = buffer(64);
+    let w = checked(coil_crypto_ed25519_sign(secret, secret.len(), msg, msg.len(), out, 64, err_ptr()))?;
+    return fit(out, w);
 }
 
 /// Checks that `sig` is a valid Ed25519 signature of `msg` by `public_key`.
@@ -658,9 +572,7 @@ fn ed25519_sign(Vec<byte> secret, Vec<byte> msg) -> Result<Vec<byte>, CryptoErro
 /// `sig` not 64, `CryptoError::InvalidInput` when `public_key` is not a valid
 /// point, and `CryptoError::AuthenticationFailed` when the signature does not verify.
 fn ed25519_verify(Vec<byte> public_key, Vec<byte> msg, Vec<byte> sig) -> Result<bool, CryptoError> {
-    let lib = native();
-    let f = fn_ed25519_verify;
-    checked(invoke(lib, f, (public_key, public_key.len(), msg, msg.len(), sig, sig.len(), 0)))?;
+    checked(coil_crypto_ed25519_verify(public_key, public_key.len(), msg, msg.len(), sig, sig.len(), err_ptr()))?;
     return true;
 }
 
@@ -688,8 +600,10 @@ fn ed25519_verify(Vec<byte> public_key, Vec<byte> msg, Vec<byte> sig) -> Result<
 /// assert!(a_shared.len() == 32 && a_shared == b_shared);
 /// ```
 fn x25519_generate() -> Result<(Vec<byte>, Vec<byte>), CryptoError> {
-    native();
-    return keypair_with(fn_x25519_generate)?;
+    let secret = buffer(32);
+    let public = buffer(32);
+    checked(coil_crypto_x25519_generate(secret, public, err_ptr()))?;
+    return (secret, public);
 }
 
 /// Computes the 32-byte X25519 shared secret of our `secret` key and the
@@ -702,8 +616,9 @@ fn x25519_generate() -> Result<(Vec<byte>, Vec<byte>), CryptoError> {
 ///
 /// Returns `CryptoError::InvalidLength` when either key is not 32 bytes.
 fn x25519_shared_secret(Vec<byte> secret, Vec<byte> public_key) -> Result<Vec<byte>, CryptoError> {
-    native();
-    return pair_with(fn_x25519_shared_secret, secret, public_key, 32)?;
+    let out = buffer(32);
+    let w = checked(coil_crypto_x25519_shared_secret(secret, secret.len(), public_key, public_key.len(), out, 32, err_ptr()))?;
+    return fit(out, w);
 }
 
 /// Hashes `password` with Argon2id and returns the PHC string
@@ -732,8 +647,9 @@ fn x25519_shared_secret(Vec<byte> secret, Vec<byte> public_key) -> Result<Vec<by
 /// assert!(argon2id_verify(to_bytes("hunter3"), stored).is_err());
 /// ```
 fn argon2id_hash(Vec<byte> password, Vec<byte> salt) -> Result<string, CryptoError> {
-    native();
-    let bytes = pair_with(fn_argon2id_hash, password, salt, 512)?;
+    let out = buffer(512);
+    let w = checked(coil_crypto_argon2id_hash(password, password.len(), salt, salt.len(), out, 512, err_ptr()))?;
+    let bytes = fit(out, w);
     return match from_bytes(bytes) {
         Result::Ok(text) => text,
         Result::Err(_) => raise CryptoError::Other,
@@ -750,10 +666,8 @@ fn argon2id_hash(Vec<byte> password, Vec<byte> salt) -> Result<string, CryptoErr
 /// Returns `CryptoError::InvalidInput` when `hash` is not a valid PHC string,
 /// and `CryptoError::AuthenticationFailed` when the password does not match.
 fn argon2id_verify(Vec<byte> password, string hash) -> Result<bool, CryptoError> {
-    let lib = native();
-    let f = fn_argon2id_verify;
     // `ConstBytes` lends the PHC string's bytes in place.
-    checked(invoke(lib, f, (password, password.len(), hash, hash.len(), 0)))?;
+    checked(coil_crypto_argon2id_verify(password, password.len(), hash, hash.len(), err_ptr()))?;
     return true;
 }
 
@@ -773,10 +687,5 @@ fn argon2id_verify(Vec<byte> password, string hash) -> Result<bool, CryptoError>
 /// assert!(!ct_eq(to_bytes("token"), to_bytes("tokens")));
 /// ```
 fn ct_eq(Vec<byte> a, Vec<byte> b) -> bool {
-    let lib = native();
-    let f = fn_ct_eq;
-    return match invoke(lib, f, (a, a.len(), b, b.len())) {
-        Result::Ok(eq) => eq != 0,
-        Result::Err(_) => false,
-    };
+    return coil_crypto_ct_eq(a, a.len(), b, b.len()) != 0;
 }
