@@ -5,7 +5,7 @@ on:
     branches: [main]
     tags: ["v*"]
   pull_request:
-    branches: [main]
+    branches: [main, feature/native]
 
 # A new push to a pull request cancels that PR's older runs. Runs on the
 # default branch are never cancelled once started.
@@ -37,6 +37,15 @@ jobs:
       - name: Native release build
         working-directory: coil-crypto/native
         run: cargo build --release
+
+      # COI-235: release libcrypto must not export heap helpers.
+      - name: No heap helpers exported
+        working-directory: coil-crypto/native
+        run: |
+          if nm -D --defined-only target/release/libcrypto.so | grep -E ' coil_crypto_(alloc|store_u8|load_u8|free)$'; then
+            echo "libcrypto exports a heap helper" >&2
+            exit 1
+          fi
 
       - name: Place libcrypto.so on FFI search path
         working-directory: coil-crypto
